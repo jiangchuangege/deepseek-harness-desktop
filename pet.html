@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <style>
   html,body{margin:0;padding:0;background:#20222a;overflow:hidden;user-select:none;font-family:'Segoe UI',sans-serif;}
-  #pet{ position:relative; width:128px; height:128px; margin:4px; cursor:grab; -webkit-app-region:drag; }
+  #pet{ position:relative; width:128px; height:128px; margin:4px; cursor:grab; }
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
   #ring{ position:absolute; inset:0; border-radius:18px; pointer-events:none;
     box-shadow:0 0 0 2px rgba(110,168,255,.55), 0 8px 22px rgba(0,0,0,.45); animation:bob 3.4s ease-in-out infinite; }
@@ -25,10 +25,23 @@
 <script>
   const pet=document.getElementById('pet');
   document.getElementById('x').addEventListener('click',()=>window.close());
-  // 点击宠物 → 弹出原生功能菜单
-  pet.addEventListener('click', e=>{
+  const HD = window.harnessDesktop;
+  // JS 拖拽 + 点击菜单: 小移动视为点击弹菜单, 大移动视为拖窗
+  let down=false, sx=0, sy=0, wx=0, wy=0, moved=false;
+  pet.addEventListener('mousedown', e=>{
     if(e.target.id==='x') return;
-    if(window.harnessDesktop && window.harnessDesktop.openPetMenu) window.harnessDesktop.openPetMenu();
+    down=true; moved=false; sx=e.screenX; sy=e.screenY;
+    if(HD && HD.getPetPos) HD.getPetPos().then(p=>{ if(p){ wx=p.x; wy=p.y; } });
+  });
+  window.addEventListener('mousemove', e=>{
+    if(!down) return;
+    const dx=e.screenX-sx, dy=e.screenY-sy;
+    if(Math.abs(dx)+Math.abs(dy) > 5) moved=true;
+    if(moved && HD && HD.movePet) HD.movePet(wx+dx, wy+dy);
+  });
+  window.addEventListener('mouseup', e=>{
+    if(!down) return; down=false;
+    if(!moved && HD && HD.openPetMenu) HD.openPetMenu();   // 点击(未拖动) → 弹菜单
   });
 </script>
 </body>

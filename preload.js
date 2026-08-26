@@ -8,5 +8,7 @@ contextBridge.exposeInMainWorld('harnessDesktop', {
   searchPlugins: (query) => ipcRenderer.invoke('search-plugins', query),
   openPetMenu: () => ipcRenderer.invoke('show-pet-menu'),
   openMarket: () => ipcRenderer.invoke('open-plugin-market'),
-  openProxy: () => ipcRenderer.invoke('open-proxy-external')
+  openProxy: () => ipcRenderer.invoke('open-proxy-external'),
+  getPetPos: () => ipcRenderer.invoke('get-pet-pos'),
+  movePet: (x, y) => ipcRenderer.invoke('move-pet', x, y)
 });

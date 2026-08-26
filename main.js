@@ -184,6 +184,9 @@ ipcMain.handle('show-pet-menu', () => {
 // 宠物菜单: 打开社区插件市场 / 打开模型列表
 ipcMain.handle('open-plugin-market', () => { createPluginWindow(); });
 ipcMain.handle('open-proxy-external', () => { shell.openExternal(`http://127.0.0.1:${PROXY_PORT}/v1/models`); });
+// 宠物拖拽
+ipcMain.handle('get-pet-pos', () => (petWindow && !petWindow.isDestroyed()) ? petWindow.getPosition() : [0,0]);
+ipcMain.handle('move-pet', (event, x, y) => { if (petWindow && !petWindow.isDestroyed()) petWindow.setPosition(Math.round(Number(x)), Math.round(Number(y))); });
 
 ipcMain.handle('install-plugin', async (event, spec) => {
   // spec: { type: 'Plugin'|'Skill'|'MCP'|'Patch', pkg: 'xxxx' }
