@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Qwen Harness 桌面客户端
+title DeepSeek Harness 桌面客户端
 cd /d "%~dp0"
 
 REM 检查 node

@@ -1,5 +1,5 @@
 {
-  "name": "Qwen Harness 桌面客户端 · 插件注册表",
+  "name": "DeepSeek Harness 桌面客户端 · 插件注册表",
   "description": "集中配置客户端附带/可用的插件、技能、MCP 服务器与本地补丁。本仓库内置精选一批开箱即用项, 其余可随时在窗口内通过 dsh plugin add 安装, 也可直接编辑本文件扩展。",
   "patches": [
     {

@@ -1,7 +1,7 @@
-// qwen-harness-desktop 主进程
+// deepseek-harness-desktop 主进程
 // 职责:
 //   1) 打开 DSH Web 界面(默认连接 DSH_WEB_URL 或 http://127.0.0.1:3080)
-//   2) 自动拉起本地"工具调用补丁"代理(qwen_tool_proxy.py, 端口 8081)
+//   2) 自动拉起本地"工具调用补丁"代理(tool_proxy.py, 端口 8081)
 //   3) 通过 IPC 提供插件注册表信息, 供窗口内"插件面板"使用
 //   4) 支持从窗口触发"安装 GitHub 插件/技能"(dsh plugin add)
 
@@ -12,7 +12,7 @@ const fs = require('fs');
 
 const DSH_URL = process.env.DSH_WEB_URL || 'http://127.0.0.1:3080';
 const PROXY_PORT = 8081;
-const PROXY_UPSTREAM = process.env.QWEN_PROXY_UPSTREAM || 'http://127.0.0.1:8080';
+const PROXY_UPSTREAM = process.env.HARNESS_PROXY_UPSTREAM || 'http://127.0.0.1:8080';
 const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
 
 let mainWindow = null;
@@ -27,7 +27,7 @@ function readPlugins() {
   }
 }
 
-// 启动工具调用补丁代理(本地 Qwen 模型需要它才能被 DSH 驱动)
+// 启动工具调用补丁代理(本地模型需要它才能被 DSH 驱动)
 function startProxy() {
   const pyscript = path.join(__dirname, 'scripts', 'qwen_tool_proxy.py');
   if (!fs.existsSync(pyscript)) { console.warn('[proxy] 未找到 qwen_tool_proxy.py, 跳过启动'); return; }
@@ -45,7 +45,7 @@ function startProxy() {
 
 // 可选: 若 DSH 未运行, 则拉起 dsh web。默认关闭, 以免端口冲突。
 function maybeStartDsh() {
-  if (process.env.QWEN_LAUNCH_DSH === '1') {
+  if (process.env.HARNESS_LAUNCH_DSH === '1') {
     console.log('[dsh] 尝试启动 dsh web ...');
     dshProc = spawn('dsh', ['web'], { shell: process.platform === 'win32' });
     dshProc.stdout.on('data', d => console.log('[dsh] ' + String(d).trim()));
@@ -57,7 +57,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 940,
-    title: 'Qwen Harness 桌面客户端',
+    title: 'DeepSeek Harness 桌面客户端',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

@@ -1,5 +1,5 @@
 {
-  "name": "qwen-harness-desktop",
+  "name": "deepseek-harness-desktop",
   "version": "1.0.0",
   "description": "DeepSeek Harness 桌面客户端 —— 原生窗口包裹 DSH Web 界面 + 插件/技能/MCP 注册表 + 本地工具调用补丁",
   "author": "jiangchuangege",
@@ -14,8 +14,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.jiangchuangege.qwenharnessdesktop",
-    "productName": "Qwen Harness 桌面客户端",
+    "appId": "com.jiangchuangege.harnessdesktop",
+    "productName": "DeepSeek Harness 桌面客户端",
     "asar": false,
     "directories": { "output": "release" },
     "files": [
