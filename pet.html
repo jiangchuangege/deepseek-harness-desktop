@@ -31,7 +31,7 @@
   pet.addEventListener('mousedown', e=>{
     if(e.target.id==='x') return;
     down=true; moved=false; sx=e.screenX; sy=e.screenY;
-    if(HD && HD.getPetPos) HD.getPetPos().then(p=>{ if(p){ wx=p.x; wy=p.y; } });
+    if(HD && HD.getPetPos) HD.getPetPos().then(p=>{ if(Array.isArray(p) && p.length===2){ wx=p[0]; wy=p[1]; } });
   });
   window.addEventListener('mousemove', e=>{
     if(!down) return;
