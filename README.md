@@ -5,6 +5,19 @@
 
 ---
 
+## ⬇️ 直接下载已编译好的 exe(无需自己打包)
+
+本仓库已在 **GitHub Releases** 发布现成的 `.exe`,**下载即用,无需 `npm install`、无需打包**:
+
+- **安装包**(推荐):`DeepSeek.Harness.Setup.1.0.0.exe` —— 双击安装到开始菜单
+- **便携版**(免安装):`DeepSeek.Harness.1.0.0.exe` —— 双击直接运行
+
+👉 打开 **Releases 页面**:https://github.com/jiangchuangege/deepseek-harness-desktop/releases
+
+> 下面「源码运行/打包」仅供想自行编译、改图标、改插件的人使用。普通用户直接下上面的 exe 即可。
+
+---
+
 ## 它能做什么
 
 - 🪟 **原生桌面窗口**承载 DSH Web 界面(默认连接 `DSH_WEB_URL` 或 `http://127.0.0.1:3080`)。
