@@ -5,7 +5,7 @@
 //   3) 通过 IPC 提供插件注册表信息, 供窗口内"插件面板"使用
 //   4) 支持从窗口触发"安装 GitHub 插件/技能"(dsh plugin add)
 
-const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeTheme, Tray } = require('electron');
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -18,6 +18,7 @@ const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
 let mainWindow = null;
 let petWindow = null;
 let pluginWindow = null;
+let tray = null;
 let proxyProc = null;
 let dshProc = null;
 
@@ -77,13 +78,13 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-// 桌面宠物: 透明、无边框、置顶、可拖拽的小窗
+// 桌面宠物: 实体轻量小窗(不做透明, 避免 Windows 掉帧卡顿)
 function createPetWindow() {
   if (petWindow) { petWindow.show(); petWindow.focus(); return; }
   petWindow = new BrowserWindow({
-    width: 160, height: 190,
-    transparent: true, frame: false, resizable: false, alwaysOnTop: true,
-    skipTaskbar: true,
+    width: 140, height: 150,
+    backgroundColor: '#20222a',
+    frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   petWindow.loadFile(path.join(__dirname, 'pet.html'));
@@ -107,7 +108,7 @@ function createPluginWindow() {
 function createMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: '文件', submenu: [
-      { label: '插件浏览器', accelerator: 'Ctrl+Shift+P', click: () => createPluginWindow() },
+      { label: '社区插件市场', accelerator: 'Ctrl+Shift+P', click: () => createPluginWindow() },
       { label: '桌面宠物', accelerator: 'Ctrl+Shift+T', click: () => createPetWindow() },
       { label: '检查补丁(模型列表)', click: () => shell.openExternal(`http://127.0.0.1:${PROXY_PORT}/v1/models`) },
       { type: 'separator' },
@@ -115,6 +116,19 @@ function createMenu() {
     ]},
     { label: '视图', submenu: [ { role: 'reload' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools' } ] }
   ]));
+  // 系统托盘: 提供常驻入口(社区插件市场 / 桌面宠物 / 退出)
+  try {
+    tray = new Tray(path.join(__dirname, 'assets', 'icon.png'));
+    tray.setToolTip('DeepSeek Harness 桌面客户端');
+    tray.setContextMenu(Menu.buildFromTemplate([
+      { label: '社区插件市场', click: () => createPluginWindow() },
+      { label: '桌面宠物', click: () => createPetWindow() },
+      { label: '显示主窗口', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } else createWindow(); } },
+      { type: 'separator' },
+      { role: 'quit', label: '退出' }
+    ]));
+    tray.on('click', () => createPluginWindow());
+  } catch (e) { console.warn('[tray] 创建托盘失败: ' + e); }
 }
 
 function cleanup() {
@@ -163,4 +177,22 @@ ipcMain.handle('install-plugin', async (event, spec) => {
 ipcMain.handle('open-proxy-check', async () => {
   // 让用户方便把浏览器指向模型列表确认代理在跑
   return { url: `http://127.0.0.1:${PROXY_PORT}/v1/models` };
+});
+
+ipcMain.handle('search-plugins', async (event, query) => {
+  // 搜索 GitHub 上的社区插件仓库(主进程拉取, 避免渲染页 CORS)
+  if (!query || !query.trim()) return { ok: false, error: '缺少关键词' };
+  try {
+    const q = `${query} deepseek-harness OR dsh plugin`;
+    const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&per_page=12`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'dsh-plugin-market' } });
+    if (!res.ok) return { ok: false, error: `GitHub 搜索失败 (HTTP ${res.status})` };
+    const data = await res.json();
+    return {
+      ok: true,
+      items: (data.items || []).map(it => ({ full_name: it.full_name, description: it.description, html_url: it.html_url }))
+    };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
 });

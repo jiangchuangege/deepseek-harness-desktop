@@ -3,68 +3,45 @@
 <head>
 <meta charset="utf-8" />
 <style>
-  html,body { margin:0; padding:0; background:transparent; overflow:hidden; user-select:none; font-family:'Segoe UI',sans-serif; }
-  #pet { position:relative; width:120px; height:120px; cursor:grab; -webkit-app-region:drag; }
-  #pet img { width:100%; height:100%; object-fit:cover; border-radius:16px; box-shadow:0 6px 18px rgba(0,0,0,.35); }
-  /* 轻微浮动动画 */
-  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-  #pet.bob { animation:bob 2.4s ease-in-out infinite; }
-  /* 说话气泡 */
-  #bubble {
-    position:absolute; bottom:132px; left:50%; transform:translateX(-50%);
-    min-width:140px; max-width:220px; background:rgba(255,255,255,.96); color:#222;
-    padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.4;
-    box-shadow:0 4px 14px rgba(0,0,0,.25); -webkit-app-region:no-drag; display:none;
-  }
-  #bubble:after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
-    border:6px solid transparent; border-top-color:rgba(255,255,255,.96); }
-  /* 聊天框 */
-  #chat { position:absolute; bottom:-56px; left:50%; transform:translateX(-50%); display:none; -webkit-app-region:no-drag; }
-  #chat input, #chat button { font-size:12px; padding:4px 8px; border-radius:8px; border:1px solid #ccc; }
+  html,body { margin:0; padding:0; background:#20222a; overflow:hidden; user-select:none;
+    font-family:'Segoe UI',sans-serif; border-radius:14px; }
+  #pet { position:relative; width:124px; height:124px; cursor:grab; -webkit-app-region:drag; }
+  #pet img { width:100%; height:100%; object-fit:cover; border-radius:14px; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  #pet.bob { animation:bob 3s ease-in-out infinite; }
+  #x { position:absolute; top:-8px; right:-8px; z-index:3; width:20px; height:20px; border-radius:50%;
+    background:#e5484d; color:#fff; font:12px/20px sans-serif; text-align:center; cursor:pointer;
+    -webkit-app-region:no-drag; box-shadow:0 1px 4px rgba(0,0,0,.4); }
+  #bubble { position:absolute; bottom:132px; left:50%; transform:translateX(-50%); min-width:150px; max-width:220px;
+    background:rgba(255,255,255,.97); color:#222; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.4;
+    box-shadow:0 4px 14px rgba(0,0,0,.3); -webkit-app-region:no-drag; display:none; }
+  #chat { position:absolute; bottom:-52px; left:50%; transform:translateX(-50%); display:none; -webkit-app-region:no-drag; }
+  #chat input, #chat button { font-size:12px; padding:4px 8px; border-radius:8px; border:1px solid #555; background:#2a2c33; color:#eee; }
 </style>
 </head>
 <body>
-  <div id="pet" class="bob" title="双击聊天">
-    <img src="./assets/icon.png" alt="宠物" draggable="false" id="pimg" />
+  <div id="pet" class="bob">
+    <div id="x" title="关闭宠物">×</div>
+    <img src="./assets/icon.png" alt="宠物" draggable="false" />
     <div id="bubble"></div>
-    <div id="chat"><input id="msg" placeholder="跟我说话..." /><button id="send">发送</button></div>
+    <div id="chat"><input id="msg" placeholder="跟我说话..." /><button id="send">发</button></div>
   </div>
 <script>
-  const petEl = document.getElementById('pet');
-  const bubble = document.getElementById('bubble');
-  const chat = document.getElementById('chat');
-  const msg = document.getElementById('msg');
-  const send = document.getElementById('send');
-
-  const lines = [
-    '你好呀~ 今天也要加油哦！',
-    '要不要一起写点代码？',
-    '我可以陪你聊天哦 ^_^',
-    '注意休息，别太累啦！',
-    'DeepSeek Harness 真棒！',
-  ];
-  let idx = 0;
-  function say(text){ bubble.textContent = text; bubble.style.display='block'; setTimeout(()=>bubble.style.display='none', 3200); }
-
-  // 单击说一句话
-  petEl.addEventListener('click', (e)=>{ if(e.target.id!=='msg'&&e.target.id!=='send') { say(lines[idx++ % lines.length]); } });
-  // 双击打开聊天框
-  petEl.addEventListener('dblclick', ()=>{ chat.style.display = chat.style.display==='none'?'block':'none'; msg.focus(); });
-  // 发送
-  function talk(){
-    const t = msg.value.trim(); if(!t) return;
-    msg.value='';
-    // 简易回复(第一版): 含"你好/名字/代码/累"等关键词给出回应, 否则循环问候
-    const lower = t.toLowerCase();
-    if(/你好|hi|hello/.test(lower)) say('你好呀~ 很高兴见到你！');
-    else if(/名字|name/.test(lower)) say('我是 DeepSeek Harness 小宠物~');
-    else if(/代码|写|code/.test(lower)) say('陪你写代码没问题！记得保存哦~');
-    else if(/累|休息/.test(lower)) say('辛苦啦，记得休息一下~');
-    else say('我在听呢，请继续说~');
-    chat.style.display='none';
-  }
-  send.addEventListener('click', talk);
-  msg.addEventListener('keydown', e=>{ if(e.key==='Enter') talk(); });
+  const pet=document.getElementById('pet'), bubble=document.getElementById('bubble'),
+        chat=document.getElementById('chat'), msg=document.getElementById('msg'), send=document.getElementById('send');
+  const lines=['你好呀~ 今天也要加油哦！','要不要一起写点代码？','我可以陪你聊天哦 ^_^','注意休息，别太累啦！','DeepSeek Harness 真棒！'];
+  let i=0;
+  function say(t){ bubble.textContent=t; bubble.style.display='block'; setTimeout(()=>bubble.style.display='none',3000); }
+  pet.addEventListener('click',e=>{ if(e.target.id!=='msg'&&e.target.id!=='send'&&e.target.id!=='x') say(lines[i++%lines.length]); });
+  pet.addEventListener('dblclick',()=>{ chat.style.display=chat.style.display==='none'?'block':'none'; msg.focus(); });
+  document.getElementById('x').addEventListener('click',()=>window.close());
+  function talk(){ const t=msg.value.trim(); if(!t)return; msg.value=''; const L=t.toLowerCase();
+    if(/你好|hi|hello/.test(L)) say('你好呀~ 很高兴见到你！');
+    else if(/名字|name/.test(L)) say('我是 DeepSeek Harness 小宠物~');
+    else if(/代码|写|code/.test(L)) say('陪你写代码没问题！记得保存哦~');
+    else if(/累|休息/.test(L)) say('辛苦啦，记得休息一下~');
+    else say('我在听呢，请继续说~'); chat.style.display='none'; }
+  send.addEventListener('click',talk); msg.addEventListener('keydown',e=>{ if(e.key==='Enter') talk(); });
 </script>
 </body>
 </html>

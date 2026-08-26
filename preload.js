@@ -4,5 +4,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('harnessDesktop', {
   getPlugins: () => ipcRenderer.invoke('get-plugins'),
   installPlugin: (spec) => ipcRenderer.invoke('install-plugin', spec),
-  openProxyCheck: () => ipcRenderer.invoke('open-proxy-check')
+  openProxyCheck: () => ipcRenderer.invoke('open-proxy-check'),
+  searchPlugins: (query) => ipcRenderer.invoke('search-plugins', query)
 });
