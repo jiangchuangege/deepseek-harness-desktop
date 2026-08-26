@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body { margin:0; padding:20px; font-family:'Segoe UI',sans-serif; background:#1e1f24; color:#e6e6ef; }
+  h2 { margin:0 0 4px; font-size:18px; }
+  p.sub { margin:0 0 16px; color:#9aa0b0; font-size:13px; }
+  .cat { margin:14px 0 6px; font-weight:600; color:#7fb0ff; text-transform:uppercase; font-size:12px; letter-spacing:.04em; }
+  .plg { display:flex; align-items:center; justify-content:space-between; background:#2a2c33;
+    border:1px solid #373a44; border-radius:10px; padding:10px 14px; margin:6px 0; gap:12px; }
+  .plg .t { font-weight:600; }
+  .plg .d { color:#9aa0b0; font-size:12.5px; margin-top:2px; }
+  .plg .tag { font-size:11px; color:#7fb0ff; border:1px solid #3a6ea5; border-radius:6px; padding:1px 6px; margin-left:6px; }
+  .plg button { background:#3b82f6; color:#fff; border:none; border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13px; }
+  .plg button:hover { background:#2f6fd6; }
+  .plg button:disabled { background:#4b5563; cursor:default; }
+  .status { position:fixed; bottom:14px; left:20px; color:#8fd18f; font-size:13px; }
+</style>
+</head>
+<body>
+  <h2>插件浏览器</h2>
+  <p class="sub">浏览社区插件 / 技能 / MCP,点击【安装】即会调用 <code>dsh plugin add &lt;包&gt;</code>。可自行编辑 <code>config/plugins.json</code> 增加更多条目。</p>
+  <div id="list">加载中...</div>
+  <div class="status" id="status"></div>
+<script>
+  const list = document.getElementById('list');
+  const status = document.getElementById('status');
+  async function render(){
+    const data = await window.harnessDesktop.getPlugins();
+    const sections = [ ['patches','补丁'], ['plugins','插件'], ['skills','技能'], ['mcpServers','MCP 服务器'] ];
+    let html='';
+    for (const [key,label] of sections){
+      const arr = (data && data[key])||[];
+      if(!arr.length) continue;
+      html += `<div class="cat">${label}</div>`;
+      for (const p of arr){
+        const btn = p.enabled
+          ? `<button disabled>已启用</button>`
+          : `<button onclick="install('${(p.source||'').replace(/'/g,"\\'")}')">安装</button>`;
+        html += `<div class="plg"><div><span class="t">${p.name}</span><span class="tag">${p.type}</span><div class="d">${p.desc||''}</div></div>${btn}</div>`;
+      }
+    }
+    html += `<div class="cat">快速接入说明</div><div class="plg"><div><div class="t">从 GitHub 安装任意 DSH 插件</div><div class="d">可在程序里/命令行执行: dsh plugin --profile web add &lt;包名&gt;</div></div></div>`;
+    list.innerHTML = html || '暂无插件条目。';
+  }
+  window.addEventListener('DOMContentLoaded', render);
+  window.install = async function(source){
+    const pkg = (source||'').replace(/^github\.com\//,'github:').replace(/^https?:\/\//,'');
+    if(!pkg){ status.textContent='该条目没有可安装的来源'; return; }
+    status.textContent = '正在安装: '+pkg+' ...';
+    const r = await window.harnessDesktop.installPlugin({ pkg });
+    status.textContent = r.ok ? '✅ '+r.message : '❌ '+r.error;
+  };
+</script>
+</body>
+</html>

@@ -21,6 +21,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "pet.html",
+      "plugins.html",
       "config/**/*",
       "scripts/**/*",
       "assets/**/*",

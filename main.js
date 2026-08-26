@@ -5,7 +5,7 @@
 //   3) 通过 IPC 提供插件注册表信息, 供窗口内"插件面板"使用
 //   4) 支持从窗口触发"安装 GitHub 插件/技能"(dsh plugin add)
 
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeTheme } = require('electron');
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -16,6 +16,8 @@ const PROXY_UPSTREAM = process.env.HARNESS_PROXY_UPSTREAM || 'http://127.0.0.1:8
 const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
 
 let mainWindow = null;
+let petWindow = null;
+let pluginWindow = null;
 let proxyProc = null;
 let dshProc = null;
 
@@ -75,15 +77,60 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
+// 桌面宠物: 透明、无边框、置顶、可拖拽的小窗
+function createPetWindow() {
+  if (petWindow) { petWindow.show(); petWindow.focus(); return; }
+  petWindow = new BrowserWindow({
+    width: 160, height: 190,
+    transparent: true, frame: false, resizable: false, alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
+  });
+  petWindow.loadFile(path.join(__dirname, 'pet.html'));
+  petWindow.on('closed', () => { petWindow = null; });
+}
+
+// 插件浏览器: 独立窗口
+function createPluginWindow() {
+  if (pluginWindow) { pluginWindow.focus(); return; }
+  pluginWindow = new BrowserWindow({
+    width: 760, height: 620,
+    title: '插件浏览器',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
+  });
+  pluginWindow.loadFile(path.join(__dirname, 'plugins.html'));
+  pluginWindow.on('closed', () => { pluginWindow = null; });
+}
+
+// 原生菜单: 插件浏览器 / 桌面宠物 / 模型列表检查
+function createMenu() {
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { label: '文件', submenu: [
+      { label: '插件浏览器', accelerator: 'Ctrl+Shift+P', click: () => createPluginWindow() },
+      { label: '桌面宠物', accelerator: 'Ctrl+Shift+T', click: () => createPetWindow() },
+      { label: '检查补丁(模型列表)', click: () => shell.openExternal(`http://127.0.0.1:${PROXY_PORT}/v1/models`) },
+      { type: 'separator' },
+      { role: 'quit', label: '退出' }
+    ]},
+    { label: '视图', submenu: [ { role: 'reload' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools' } ] }
+  ]));
+}
+
 function cleanup() {
   if (proxyProc) { proxyProc.kill(); }
   if (dshProc) { dshProc.kill(); }
+  if (petWindow) { petWindow.destroy(); }
 }
 
 app.whenReady().then(() => {
+  nativeTheme.themeSource = 'dark';
   startProxy();
   maybeStartDsh();
   createWindow();
+  createMenu();
+  // 默认显示桌面宠物(通过菜单可隐藏/再开)
+  createPetWindow();
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
