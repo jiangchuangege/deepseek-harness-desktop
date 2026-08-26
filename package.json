@@ -22,6 +22,7 @@
       "main.js",
       "preload.js",
       "pet.html",
+      "chat.html",
       "plugins.html",
       "config/**/*",
       "scripts/**/*",

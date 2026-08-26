@@ -41,8 +41,9 @@
     let h = note ? `<div class="card"><div class="desc">${note}</div></div>` : '';
     for(const it of list){
       const acts = it.url ? `<a href="${it.url}" target="_blank">打开仓库 ↗</a>` : '';
-      const pkg = it.pkg ? `<button onclick="copy('${it.pkg}')">复制包名</button><span class="pkg">${it.pkg}</span>` : '';
-      h += `<div class="card"><div class="name">${it.name}</div><div class="desc">${it.desc||''}</div><div class="acts">${acts}${pkg}</div></div>`;
+      const inst = it.pkg ? ` <button class="inst" onclick="install('${it.pkg}')">一键安装</button>` : '';
+      const pkg = it.pkg ? `<span class="pkg">${it.pkg}</span>` : '';
+      h += `<div class="card"><div class="name">${it.name}</div><div class="desc">${it.desc||''}</div><div class="acts">${acts}${inst}${pkg}</div></div>`;
     }
     results.innerHTML = h;
   }
@@ -52,13 +53,20 @@
     status.textContent='正在搜索 GitHub 社区插件...';
     const r = await window.harnessDesktop.searchPlugins(kw);
     status.textContent = r.ok ? (`找到 ${r.items.length} 个仓库`) : ('✗ '+r.error);
-    const list = (r.items||[]).map(x=>({ name:x.full_name, desc:(x.description||''), url:x.html_url }));
+    const list = (r.items||[]).map(x=>({ name:x.full_name, desc:(x.description||''), url:x.html_url, pkg:x.full_name }));
     showCards(list.length ? list : curated, list.length? '' : '搜索未命中, 回退到精选:');
   }
   window.addEventListener('DOMContentLoaded', curate);
   go.addEventListener('click', search);
   q.addEventListener('keydown', e=>{ if(e.key==='Enter') search(); });
   window.copy = txt => { navigator.clipboard.writeText(txt).then(()=>{ status.textContent='已复制: '+txt; }); };
+  // 一键安装
+  window.install = async function(pkg){
+    if(!pkg) return;
+    status.textContent='一键安装中: '+pkg+' ...';
+    const r = await window.harnessDesktop.installPlugin({ pkg });
+    status.textContent = r.ok ? '✅ '+r.message : '❌ '+r.error;
+  };
 </script>
 </body>
 </html>

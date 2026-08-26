@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('harnessDesktop', {
   installPlugin: (spec) => ipcRenderer.invoke('install-plugin', spec),
   openProxyCheck: () => ipcRenderer.invoke('open-proxy-check'),
   searchPlugins: (query) => ipcRenderer.invoke('search-plugins', query),
-  resizePet: (w, h) => ipcRenderer.invoke('resize-pet', w, h),
+  openPetMenu: () => ipcRenderer.invoke('show-pet-menu'),
   openMarket: () => ipcRenderer.invoke('open-plugin-market'),
   openProxy: () => ipcRenderer.invoke('open-proxy-external')
 });

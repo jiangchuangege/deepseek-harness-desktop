@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body{margin:0;padding:0;background:#1e1f24;color:#e9ecf5;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh;}
+  .h{ padding:10px 14px; background:linear-gradient(135deg,#2a2c36,#20222b); border-bottom:1px solid #343741; font-weight:600; }
+  .h small{ color:#8f97a8; font-weight:400; margin-left:8px; }
+  #log{ flex:1; overflow:auto; padding:12px; font-size:13px; }
+  #log div{ margin:6px 0; padding:7px 11px; border-radius:12px; max-width:80%; }
+  #log .pet{ background:#2b2e38; color:#dfe4f0; }
+  #log .me{ background:#3b82f6; color:#fff; margin-left:auto; text-align:right; }
+  .row{ display:flex; gap:8px; padding:10px 12px; border-top:1px solid #343741; }
+  .row input{ flex:1; background:#2a2d36; border:1px solid #3a3e49; border-radius:10px; color:#eef; padding:9px 12px; font-size:13px; }
+  .row button{ background:#3b82f6; color:#fff; border:none; border-radius:10px; padding:9px 18px; cursor:pointer; font-size:13px; }
+</style>
+</head>
+<body>
+  <div class="h">DeepSeek Harness 小宠物 <small>简易聊天 v1</small></div>
+  <div id="log"><div class="pet">你好呀~ 我是你的小宠物，来聊聊天吧 ^_^</div></div>
+  <div class="row"><input id="msg" placeholder="跟我说话..." /><button id="send">发送</button></div>
+<script>
+  const log=document.getElementById('log'), msg=document.getElementById('msg'), send=document.getElementById('send');
+  function add(cls,t){ const d=document.createElement('div'); d.className=cls; d.textContent=t; log.appendChild(d); log.scrollTop=log.scrollHeight; }
+  function reply(t){ const L=t.toLowerCase();
+    if(/你好|hi|hello/.test(L)) return '你好呀~ 很高兴见到你！';
+    if(/名字|name/.test(L)) return '我是 DeepSeek Harness 的小宠物~';
+    if(/代码|写|code/.test(L)) return '陪你写代码没问题！记得保存哦~';
+    if(/累|休息/.test(L)) return '辛苦啦，记得休息一下~';
+    return '我在听呢，请继续说~'; }
+  function talk(){ const t=msg.value.trim(); if(!t)return; msg.value=''; add('me',t); setTimeout(()=>add('pet',reply(t)),350); log.scrollTop=log.scrollHeight; }
+  send.addEventListener('click',talk); msg.addEventListener('keydown',e=>{ if(e.key==='Enter') talk(); }); msg.focus();
+</script>
+</body>
+</html>

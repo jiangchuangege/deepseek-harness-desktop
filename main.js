@@ -18,6 +18,7 @@ const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
 let mainWindow = null;
 let petWindow = null;
 let pluginWindow = null;
+let chatWindow = null;
 let tray = null;
 let proxyProc = null;
 let dshProc = null;
@@ -104,6 +105,18 @@ function createPluginWindow() {
   pluginWindow.on('closed', () => { pluginWindow = null; });
 }
 
+// 宠物聊天: 独立小窗
+function createChatWindow() {
+  if (chatWindow) { chatWindow.focus(); return; }
+  chatWindow = new BrowserWindow({
+    width: 340, height: 420, title: '小宠物 · 聊天',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
+  });
+  chatWindow.loadFile(path.join(__dirname, 'chat.html'));
+  chatWindow.on('closed', () => { chatWindow = null; });
+}
+
 // 原生菜单: 插件浏览器 / 桌面宠物 / 模型列表检查
 function createMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -157,9 +170,16 @@ app.on('before-quit', () => cleanup());
 // ---- IPC: 给渲染进程的插件信息 & 安装动作 ----
 ipcMain.handle('get-plugins', () => readPlugins());
 
-// 宠物窗动态尺寸
-ipcMain.handle('resize-pet', (event, w, h) => {
-  if (petWindow && !petWindow.isDestroyed()) petWindow.setSize(Number(w) || 132, Number(h) || 134);
+// 点击宠物 → 弹出原生功能菜单(原生、不卡、无黑框)
+ipcMain.handle('show-pet-menu', () => {
+  const mu = Menu.buildFromTemplate([
+    { label: '💬 聊天', click: () => createChatWindow() },
+    { label: '🧩 社区插件市场', click: () => createPluginWindow() },
+    { label: '🛰️ 检查补丁', click: () => shell.openExternal(`http://127.0.0.1:${PROXY_PORT}/v1/models`) },
+    { type: 'separator' },
+    { label: '✖ 关闭宠物', click: () => { if (petWindow) { petWindow.close(); } } }
+  ]);
+  mu.popup();
 });
 // 宠物菜单: 打开社区插件市场 / 打开模型列表
 ipcMain.handle('open-plugin-market', () => { createPluginWindow(); });
