@@ -1,0 +1,40 @@
+{
+  "name": "qwen-harness-desktop",
+  "version": "1.0.0",
+  "description": "DeepSeek Harness 桌面客户端 —— 原生窗口包裹 DSH Web 界面 + 插件/技能/MCP 注册表 + 本地工具调用补丁",
+  "author": "jiangchuangege",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.jiangchuangege.qwenharnessdesktop",
+    "productName": "Qwen Harness 桌面客户端",
+    "directories": { "output": "release" },
+    "files": [
+      "main.js",
+      "preload.js",
+      "config/**/*",
+      "scripts/**/*",
+      "assets/**/*",
+      "docs/**/*",
+      "README.md",
+      "package.json"
+    ],
+    "win": {
+      "target": [ { "target": "nsis", "arch": ["x64"] } ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "name": "Qwen Harness 桌面客户端 · 插件注册表",
+  "description": "集中配置客户端附带/可用的插件、技能、MCP 服务器与本地补丁。本仓库内置精选一批开箱即用项, 其余可随时在窗口内通过 dsh plugin add 安装, 也可直接编辑本文件扩展。",
+  "patches": [
+    {
+      "id": "qwen-tool-call-proxy",
+      "type": "Patch",
+      "name": "Qwen2.5-Coder 工具调用补丁",
+      "enabled": true,
+      "desc": "把本地 Qwen 模型原生的 <tools> 输出改写为标准 tool_calls, 使 DSH 能驱动其操控电脑。由客户端启动时的 scripts/qwen_tool_proxy.py 提供(端口 8081)。",
+      "source": "本仓库 scripts/qwen_tool_proxy.py"
+    }
+  ],
+  "plugins": [
+    {
+      "id": "dsh-agent-presets",
+      "type": "Plugin",
+      "name": "DSH Agent 预设(standard/code/minimal)",
+      "enabled": true,
+      "desc": "DSH 内置的多套 Agent 预设, 决定工具、技能、子代理等能力集合。",
+      "source": "内置 @deepseek-ai/dsh-agent-presets"
+    },
+    {
+      "id": "example-github-plugin",
+      "type": "Plugin",
+      "name": "示例: 从 GitHub 安装的 DSH 插件",
+      "enabled": false,
+      "desc": "占位示例。格式为 dsh plugin --profile web add <npm包名/GitHub链接>。安装后将出现在这里。",
+      "source": "github.com/<owner>/<repo>"
+    }
+  ],
+  "skills": [
+    {
+      "id": "cordis-plugin-development",
+      "type": "Skill",
+      "name": "Cordis 插件开发",
+      "enabled": true,
+      "desc": "DSH 内置技能: 用 Cordis 编写/扩展 DSH 插件。",
+      "source": "内置 @deepseek-ai/dsh-agent-presets/cordis"
+    },
+    {
+      "id": "editing-cordis-compositions",
+      "type": "Skill",
+      "name": "编辑 Cordis 组合",
+      "enabled": true,
+      "desc": "DSH 内置技能: 编辑配置文件、组合构件。",
+      "source": "内置 @deepseek-ai/dsh-agent-presets/cordis"
+    },
+    {
+      "id": "skill-filesystem",
+      "type": "Skill",
+      "name": "文件系统技能",
+      "enabled": true,
+      "desc": "DSH 文件读写/检索技能包。",
+      "source": "内置 @deepseek-ai/dsh-skill-filesystem"
+    }
+  ],
+  "mcpServers": [
+    {
+      "id": "example-mcp",
+      "type": "MCP",
+      "name": "示例: MCP 服务器",
+      "enabled": false,
+      "desc": "通过 MCP(模型上下文协议)外挂能力(读文件/搜网页/操作工具)。在 DSH 中配置 MCP 服务器即可接入。",
+      "source": "github.com/<owner>/<mcp-server>"
+    }
+  ]
+}
