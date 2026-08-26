@@ -16,6 +16,7 @@
   "build": {
     "appId": "com.jiangchuangege.qwenharnessdesktop",
     "productName": "Qwen Harness 桌面客户端",
+    "asar": false,
     "directories": { "output": "release" },
     "files": [
       "main.js",
@@ -28,8 +29,11 @@
       "package.json"
     ],
     "win": {
-      "target": [ { "target": "nsis", "arch": ["x64"] } ],
-      "icon": "assets/icon.ico"
+      "target": [
+        { "target": "portable", "arch": ["x64"] },
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.png"
     },
     "nsis": {
       "oneClick": false,
