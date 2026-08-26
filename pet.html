@@ -3,45 +3,97 @@
 <head>
 <meta charset="utf-8" />
 <style>
-  html,body { margin:0; padding:0; background:#20222a; overflow:hidden; user-select:none;
-    font-family:'Segoe UI',sans-serif; border-radius:14px; }
-  #pet { position:relative; width:124px; height:124px; cursor:grab; -webkit-app-region:drag; }
-  #pet img { width:100%; height:100%; object-fit:cover; border-radius:14px; }
-  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-  #pet.bob { animation:bob 3s ease-in-out infinite; }
-  #x { position:absolute; top:-8px; right:-8px; z-index:3; width:20px; height:20px; border-radius:50%;
-    background:#e5484d; color:#fff; font:12px/20px sans-serif; text-align:center; cursor:pointer;
-    -webkit-app-region:no-drag; box-shadow:0 1px 4px rgba(0,0,0,.4); }
-  #bubble { position:absolute; bottom:132px; left:50%; transform:translateX(-50%); min-width:150px; max-width:220px;
-    background:rgba(255,255,255,.97); color:#222; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.4;
-    box-shadow:0 4px 14px rgba(0,0,0,.3); -webkit-app-region:no-drag; display:none; }
-  #chat { position:absolute; bottom:-52px; left:50%; transform:translateX(-50%); display:none; -webkit-app-region:no-drag; }
-  #chat input, #chat button { font-size:12px; padding:4px 8px; border-radius:8px; border:1px solid #555; background:#2a2c33; color:#eee; }
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;user-select:none;font-family:'Segoe UI',sans-serif;}
+  :root{ --acc:#6ea8ff; --glass:rgba(22,24,31,.82); }
+  /* 宠物卡片 */
+  #pet{ position:relative; width:120px; height:120px; margin:6px; cursor:pointer; }
+  #pet img{ width:100%; height:100%; object-fit:cover; border-radius:18px; }
+  #ring{ position:absolute; inset:0; border-radius:18px; pointer-events:none;
+    box-shadow:0 0 0 2px rgba(110,168,255,.6), 0 10px 26px rgba(0,0,0,.5); }
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  #pet.bob{ animation:bob 3.2s ease-in-out infinite; }
+  #x{ position:absolute; top:-6px; right:-6px; z-index:5; width:22px; height:22px; border-radius:50%;
+    background:#e5484d; color:#fff; font:12px/22px sans-serif; text-align:center; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.4); }
+  /* 功顶菜单 */
+  #menu{ position:absolute; top:150px; left:6px; width:180px; background:var(--glass); backdrop-filter:blur(14px);
+    border:1px solid rgba(110,168,255,.35); border-radius:16px; box-shadow:0 12px 34px rgba(0,0,0,.5);
+    padding:6px; display:none; z-index:10; -webkit-app-region:no-drag; }
+  #menu::before{ content:''; position:absolute; top:-7px; left:24px; border:7px solid transparent; border-bottom-color:rgba(22,24,31,.9); }
+  .mi{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px; color:#e9ecf5; cursor:pointer; font-size:14px; }
+  .mi:hover{ background:rgba(110,168,255,.16); }
+  .mi .ic{ width:26px; height:26px; border-radius:8px; display:grid; place-items:center; font-size:15px; background:linear-gradient(135deg,#6ea8ff,#8f7bff); }
+  .mi small{ color:#98a0b3; margin-left:auto; font-size:11px; }
+  #sep{ height:1px; background:rgba(255,255,255,.08); margin:4px 6px; }
+  /* 聊天面板 */
+  #chat{ position:absolute; top:150px; left:6px; width:230px; display:none; -webkit-app-region:no-drag; }
+  .cb{ background:var(--glass); backdrop-filter:blur(14px); border:1px solid rgba(110,168,255,.35); border-radius:16px;
+    box-shadow:0 12px 34px rgba(0,0,0,.5); padding:10px; }
+  .log{ max-height:96px; overflow:auto; font-size:12.5px; color:#e9ecf5; }
+  .log div{ margin:4px 0; } .log .me{ color:#9fc2ff; text-align:right; }
+  .row{ display:flex; gap:6px; margin-top:8px; }
+  .row input{ flex:1; background:#2a2d36; border:1px solid #3a3e49; border-radius:9px; color:#eef; padding:7px 10px; font-size:12.5px; }
+  .row button{ background:var(--acc); color:#fff; border:none; border-radius:9px; padding:7px 12px; font-size:12.5px; cursor:pointer; }
 </style>
 </head>
 <body>
-  <div id="pet" class="bob">
-    <div id="x" title="关闭宠物">×</div>
+  <div id="pet" class="bob" title="点击打开菜单">
+    <div id="ring"></div>
     <img src="./assets/icon.png" alt="宠物" draggable="false" />
-    <div id="bubble"></div>
-    <div id="chat"><input id="msg" placeholder="跟我说话..." /><button id="send">发</button></div>
+    <div id="x" title="关闭宠物">×</div>
   </div>
+
+  <div id="menu">
+    <div class="mi" data-a="chat"><span class="ic">💬</span>聊天<small>Ctrl+…</small></div>
+    <div class="mi" data-a="market"><span class="ic">🧩</span>社区插件市场</div>
+    <div class="mi" data-a="proxy"><span class="ic">🛰️</span>检查补丁</div>
+    <div id="sep"></div>
+    <div class="mi" data-a="about"><span class="ic">ℹ️</span>关于</div>
+  </div>
+
+  <div id="chat">
+    <div class="cb">
+      <div class="log" id="log">宠物: 你好呀~ 点我聊聊天吧 ^_^</div>
+      <div class="row"><input id="msg" placeholder="跟我说话..." /><button id="send">发</button></div>
+    </div>
+  </div>
+
 <script>
-  const pet=document.getElementById('pet'), bubble=document.getElementById('bubble'),
-        chat=document.getElementById('chat'), msg=document.getElementById('msg'), send=document.getElementById('send');
-  const lines=['你好呀~ 今天也要加油哦！','要不要一起写点代码？','我可以陪你聊天哦 ^_^','注意休息，别太累啦！','DeepSeek Harness 真棒！'];
-  let i=0;
-  function say(t){ bubble.textContent=t; bubble.style.display='block'; setTimeout(()=>bubble.style.display='none',3000); }
-  pet.addEventListener('click',e=>{ if(e.target.id!=='msg'&&e.target.id!=='send'&&e.target.id!=='x') say(lines[i++%lines.length]); });
-  pet.addEventListener('dblclick',()=>{ chat.style.display=chat.style.display==='none'?'block':'none'; msg.focus(); });
-  document.getElementById('x').addEventListener('click',()=>window.close());
-  function talk(){ const t=msg.value.trim(); if(!t)return; msg.value=''; const L=t.toLowerCase();
-    if(/你好|hi|hello/.test(L)) say('你好呀~ 很高兴见到你！');
-    else if(/名字|name/.test(L)) say('我是 DeepSeek Harness 小宠物~');
-    else if(/代码|写|code/.test(L)) say('陪你写代码没问题！记得保存哦~');
-    else if(/累|休息/.test(L)) say('辛苦啦，记得休息一下~');
-    else say('我在听呢，请继续说~'); chat.style.display='none'; }
-  send.addEventListener('click',talk); msg.addEventListener('keydown',e=>{ if(e.key==='Enter') talk(); });
+  const pet=document.getElementById('pet'), menu=document.getElementById('menu'), chat=document.getElementById('chat'),
+        logEl=document.getElementById('log'), msg=document.getElementById('msg'), send=document.getElementById('send');
+  // 窗口尺寸: [宽,高]  (空闲仅宠物; 展开菜单/聊天时加高加宽)
+  const S={ IDLE:[132,134], MENU:[200,250], CHAT:[248,250] };
+  const gl = s => window.harnessDesktop && window.harnessDesktop.resizePet ? window.harnessDesktop.resizePet(s[0], s[1]) : null;
+  const peek=()=>{ const open = menu.style.display==='block' ? S.MENU : (chat.style.display==='block' ? S.CHAT : S.IDLE); gl(open); };
+
+  function say(t){ const d=document.createElement('div'); d.textContent='宠物: '+t; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
+  function reply(t){ const L=t.toLowerCase();
+    if(/你好|hi|hello/.test(L)) return '你好呀~ 很高兴见到你！';
+    if(/名字|name/.test(L)) return '我是 DeepSeek Harness 小宠物~';
+    if(/代码|写|code/.test(L)) return '陪你写代码没问题！记得保存哦~';
+    if(/累|休息/.test(L)) return '辛苦啦，记得休息一下~';
+    return '我在听呢，请继续说~'; }
+
+  // 点击宠物: 打开/关闭菜单
+  pet.addEventListener('click', e=>{
+    if(e.target.id==='x'){ return; }
+    const showing = menu.style.display==='block';
+    menu.style.display = showing?'none':'block'; chat.style.display='none'; peek();
+  });
+  document.getElementById('x').addEventListener('click', ()=>window.close());
+  // 菜单项动作
+  document.querySelectorAll('.mi').forEach(mi=> mi.addEventListener('click', ()=>{
+    const a=mi.dataset.a;
+    if(a==='chat'){ menu.style.display='none'; chat.style.display='block'; msg.focus(); peek(); }
+    else if(a==='market'){ window.harnessDesktop && window.harnessDesktop.openMarket && window.harnessDesktop.openMarket(); menu.style.display='none'; peek(); }
+    else if(a==='proxy'){ window.harnessDesktop && window.harnessDesktop.openProxy && window.harnessDesktop.openProxy(); menu.style.display='none'; peek(); }
+    else if(a==='about'){ logEl.textContent='宠物: DeepSeek Harness 桌面客户端 v1.0'; menu.style.display='none'; chat.style.display='block'; peek(); }
+  }));
+  // 聊天
+  function talk(){ const t=msg.value.trim(); if(!t)return; msg.value='';
+    const d=document.createElement('div'); d.className='me'; d.textContent=t; logEl.appendChild(d);
+    setTimeout(()=>say(reply(t)), 350); logEl.scrollTop=logEl.scrollHeight; }
+  send.addEventListener('click', talk); msg.addEventListener('keydown', e=>{ if(e.key==='Enter') talk(); });
+  window.addEventListener('DOMContentLoaded', ()=>gl(H.IDLE));
 </script>
 </body>
 </html>

@@ -82,7 +82,7 @@ function createWindow() {
 function createPetWindow() {
   if (petWindow) { petWindow.show(); petWindow.focus(); return; }
   petWindow = new BrowserWindow({
-    width: 140, height: 150,
+    width: 132, height: 134,
     backgroundColor: '#20222a',
     frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
@@ -156,6 +156,14 @@ app.on('before-quit', () => cleanup());
 
 // ---- IPC: 给渲染进程的插件信息 & 安装动作 ----
 ipcMain.handle('get-plugins', () => readPlugins());
+
+// 宠物窗动态尺寸
+ipcMain.handle('resize-pet', (event, w, h) => {
+  if (petWindow && !petWindow.isDestroyed()) petWindow.setSize(Number(w) || 132, Number(h) || 134);
+});
+// 宠物菜单: 打开社区插件市场 / 打开模型列表
+ipcMain.handle('open-plugin-market', () => { createPluginWindow(); });
+ipcMain.handle('open-proxy-external', () => { shell.openExternal(`http://127.0.0.1:${PROXY_PORT}/v1/models`); });
 
 ipcMain.handle('install-plugin', async (event, spec) => {
   // spec: { type: 'Plugin'|'Skill'|'MCP'|'Patch', pkg: 'xxxx' }
