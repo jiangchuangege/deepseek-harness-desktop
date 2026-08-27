@@ -206,7 +206,7 @@ function createPetWindow() {
   if (petWindow) { petWindow.show(); petWindow.focus(); return; }
   petWindow = new BrowserWindow({
     width: PET_W, height: PET_H,
-    transparent: true, backgroundColor: '#00000000',
+    transparent: true, backgroundColor: '#00000000', hasShadow: false,
     frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, webSecurity: false }
   });

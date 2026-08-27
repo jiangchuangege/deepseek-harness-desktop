@@ -42,6 +42,11 @@
   }
   initLive2D();
 
+  // 性能优化: 失去焦点时暂停宠物渲染(你在主窗口工作时省 GPU), 悬停/点按时恢复
+  window.addEventListener('blur', ()=>{ if(window.setPetPaused) window.setPetPaused(true); });
+  window.addEventListener('focus', ()=>{ if(window.setPetPaused) window.setPetPaused(false); });
+  window.addEventListener('mouseover', ()=>{ if(window.setPetPaused) window.setPetPaused(false); });
+
   // 拖拽 + 轻点菜单(主进程轮询鼠标拖动; 移动>阈值=拖, 否则=点击弹菜单)
   let down=false, sx=0, sy=0, moved=false;
   document.body.addEventListener('mousedown', e=>{
