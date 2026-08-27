@@ -42,10 +42,18 @@
   }
   initLive2D();
 
-  // 性能优化: 失去焦点时暂停宠物渲染(你在主窗口工作时省 GPU), 悬停/点按时恢复
-  window.addEventListener('blur', ()=>{ if(window.setPetPaused) window.setPetPaused(true); });
-  window.addEventListener('focus', ()=>{ if(window.setPetPaused) window.setPetPaused(false); });
-  window.addEventListener('mouseover', ()=>{ if(window.setPetPaused) window.setPetPaused(false); });
+  // 性能: 只有鼠标在宠物上/最近动过时才渲染, 否则暂停(透明窗口平时几乎零渲染, 省资源)
+  let idleTimer = null;
+  function wakePet() {
+    if (window.setPetPaused) window.setPetPaused(false);
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { if (window.setPetPaused) window.setPetPaused(true); }, 2000);
+  }
+  window.addEventListener('mouseover', wakePet);
+  window.addEventListener('mousemove', wakePet);
+  window.addEventListener('mousedown', wakePet);
+  // 初始先动一下, 之后按鼠标活动决定
+  wakePet();
 
   // 拖拽 + 轻点菜单(主进程轮询鼠标拖动; 移动>阈值=拖, 否则=点击弹菜单)
   let down=false, sx=0, sy=0, moved=false;

@@ -16,8 +16,8 @@ const PROXY_UPSTREAM = process.env.HARNESS_PROXY_UPSTREAM || 'http://127.0.0.1:8
 const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
 // 桌面宠物窗口尺寸(可在此整体调整大小)
 const PET_W = 176, PET_H = 264;
-// 透明悬浮(Windows 掉帧明显时推荐关闭, 默认不透明)
-const PET_TRANSPARENT = process.env.PET_TRANSPARENT === '1';
+// 透明悬浮(Windows 掉帧明显时设置 PET_TRANSPARENT=0 可关闭透明); 默认透明
+const PET_TRANSPARENT = process.env.PET_TRANSPARENT !== '0';
 
 // 单实例: 避免重复启动导致补丁端口(8081)冲突
 const gotTheLock = app.requestSingleInstanceLock();
