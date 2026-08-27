@@ -8,8 +8,8 @@
 ## 安装(直接下载 exe)
 
 - 从 **[Release v1.1.0](https://github.com/jiangchuangege/deepseek-harness-desktop/releases/tag/v1.1.0)** 下载:
-  - **`DeepSeek Harness 桌面客户端 Setup 1.1.0.exe`** —— 安装版,双击安装到开始菜单(推荐)
-  - **`DeepSeek Harness 桌面客户端 1.1.0.exe`** —— 便携版,免安装,双击直接运行
+  - **`DeepSeek.Harness.Setup.1.1.0.exe`** —— 安装版,双击安装到开始菜单(推荐)
+  - **`DeepSeek.Harness.1.1.0.exe`** —— 便携版,免安装,双击直接运行
 - 普通用户无需 `npm install`、无需打包,下载即用。
 
 > 下方「源码运行 / 自行打包」仅供想自己编译、改图标、改插件的人使用。
