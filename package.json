@@ -24,6 +24,7 @@
       "pet.html",
       "chat.html",
       "plugins.html",
+      "notice.html",
       "config/**/*",
       "scripts/**/*",
       "assets/**/*",

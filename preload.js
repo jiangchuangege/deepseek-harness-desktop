@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('harnessDesktop', {
   startDsh: () => ipcRenderer.invoke('start-dsh'),
   stopDsh: () => ipcRenderer.invoke('stop-dsh'),
   dshStatus: () => ipcRenderer.invoke('dsh-status'),
+  showNotice: (opts) => ipcRenderer.invoke('show-notice', opts),
   onInstallProgress: (cb) => ipcRenderer.on('install-progress', (_e, data) => cb(data))
 });

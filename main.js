@@ -5,7 +5,7 @@
 //   3) 通过 IPC 提供插件注册表信息, 供窗口内"插件面板"使用
 //   4) 支持从窗口触发"安装 GitHub 插件/技能"(dsh plugin add)
 
-const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeTheme, Tray, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, nativeTheme, Tray, screen } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -99,6 +99,35 @@ function maybeStartDsh() {
   if (process.env.HARNESS_LAUNCH_DSH === '1') launchDsh();
 }
 
+// 自研好看的提示窗口(取代难看的系统原生弹窗): 右下角浅色深色 Toast, 自动关闭
+let noticeWindow = null;
+function showAppMessage(opts) {
+  try {
+    const q = 'title=' + encodeURIComponent(opts.title || '提示') +
+      '&message=' + encodeURIComponent(opts.message || '') +
+      '&detail=' + encodeURIComponent(opts.detail || '') +
+      '&type=' + encodeURIComponent(opts.type || 'info');
+    const url = 'file://' + path.join(__dirname, 'notice.html') + '?' + q;
+    if (noticeWindow && !noticeWindow.isDestroyed()) noticeWindow.close();
+    const w = 440, h = 150;
+    noticeWindow = new BrowserWindow({
+      width: w, height: h, frame: false, resizable: false, alwaysOnTop: true,
+      skipTaskbar: true, backgroundColor: '#1e1f24', show: false,
+      webPreferences: { contextIsolation: true, nodeIntegration: false }
+    });
+    noticeWindow.loadURL(url);
+    noticeWindow.once('ready-to-show', () => {
+      const wa = screen.getPrimaryDisplay().workArea;
+      noticeWindow.setPosition(Math.round(wa.x + wa.width - w - 24), Math.round(wa.y + wa.height - h - 24));
+      noticeWindow.show();
+    });
+    noticeWindow.on('closed', () => { noticeWindow = null; });
+  } catch (e) { console.error('[notice] ' + e); }
+}
+function svcToast(message, detail, type) {
+  showAppMessage({ type: type || 'info', title: 'DeepSeek Harness 服务', message, detail });
+}
+
 // DSH 服务可达性检查(默认 3080)
 async function dshUp(url) {
   const controller = new AbortController();
@@ -113,33 +142,33 @@ function focusOrLoadMain() {
   if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.loadURL(DSH_URL); mainWindow.show(); mainWindow.focus(); }
   else createWindow();
 }
-// 菜单/宠物/托盘触发的三个服务动作(带提示对话框)
+// 菜单/宠物/托盘触发的三个服务动作(用自带 UI 提示)
 async function handleStartDsh() {
   const up = await dshUp(DSH_URL);
   if (up) {
-    dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: 'DeepSeek Harness 服务已在运行 ✅', detail: DSH_URL });
+    svcToast('DeepSeek Harness 服务已在运行', DSH_URL, 'ok');
     focusOrLoadMain();
     return;
   }
   if (dshProc && dshProc.exitCode === null) {
-    dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: 'DeepSeek Harness 服务正在启动…', detail: DSH_URL });
+    svcToast('DeepSeek Harness 服务正在启动…', DSH_URL, 'info');
     return;
   }
   launchDsh();
-  dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: '已启动 DeepSeek Harness 服务(后台)', detail: '界面稍候将自动加载。若仍未加载, 稍后通过菜单「检查服务状态」确认。' });
+  svcToast('已启动 DeepSeek Harness 服务(后台)', '界面稍候将自动加载。', 'ok');
   setTimeout(() => focusOrLoadMain(), 1600);
 }
 async function handleStopDsh() {
   if (dshProc && dshProc.exitCode === null) {
     dshProc.kill();
-    dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: '已停止由客户端托管的 DeepSeek Harness 服务' });
+    svcToast('已停止由客户端托管的 DeepSeek Harness 服务', '', 'ok');
   } else {
-    dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: '该服务不是由客户端托管(可能由外部启动), 客户端无法停止', detail: '客户端只能停止它自己启动的 dsh web 进程。' });
+    svcToast('该服务不是由客户端托管, 无法停止', '客户端只能停止它自己启动的 dsh web 进程。', 'err');
   }
 }
 async function handleDshStatus() {
   const up = await dshUp(DSH_URL);
-  dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: up ? 'DeepSeek Harness 服务运行中 ✅' : 'DeepSeek Harness 服务未运行 ⚠️', detail: DSH_URL });
+  svcToast(up ? 'DeepSeek Harness 服务运行中' : 'DeepSeek Harness 服务未运行', up ? DSH_URL : '未检测到服务', up ? 'ok' : 'err');
 }
 
 function createWindow() {
@@ -442,6 +471,8 @@ ipcMain.handle('dsh-status', async () => {
   const running = await dshUp(DSH_URL);
   return { running, url: DSH_URL };
 });
+// 渲染窗口触发自研提示(Toast)
+ipcMain.handle('show-notice', (event, opts) => { showAppMessage(opts || {}); return { ok: true }; });
 
 ipcMain.handle('search-plugins', async (event, query, page) => {
   // 搜索 GitHub 上的社区插件仓库(主进程拉取, 避免渲染页 CORS)

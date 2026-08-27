@@ -14,9 +14,10 @@
   .search input{flex:1;padding:10px 13px;border-radius:10px;border:1px solid #3a3d47;background:#2a2c33;color:#eee;font-size:14px;}
   .search button{background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-size:14px;}
   /* 补丁在线状态徽标 */
-  #pstat{margin-left:auto;font-size:13px;padding:5px 13px;border-radius:20px;background:#2a2c33;color:#98a0b0;white-space:nowrap;}
-  #pstat.on{background:#12301d;color:#4ade80;}
-  #pstat.off{background:#3a1520;color:#f87171;}
+  #pstat,#dsstat{margin-left:auto;font-size:13px;padding:5px 13px;border-radius:20px;background:#2a2c33;color:#98a0b0;white-space:nowrap;cursor:pointer;}
+  #pstat.on,#dsstat.on{background:#12301d;color:#4ade80;}
+  #pstat.off,#dsstat.off{background:#3a1520;color:#f87171;}
+  #dsstat{margin-left:8px;}
   /* 进度条 */
   #prog{display:none;margin-bottom:14px;background:#2a2c33;border:1px solid #373a44;border-radius:12px;padding:10px 14px;}
   #prog .lbl{display:flex;justify-content:space-between;font-size:13.5px;color:#9aa0b0;margin-bottom:6px;}
@@ -51,6 +52,7 @@
 <body>
   <div class="top"><h2>社区插件 &amp; MCP 市场</h2>
     <div class="tabs"><button id="tb-plug" class="on" onclick="tab('plug')">插件 / 技能</button><button id="tb-mcp" onclick="tab('mcp')">MCP 服务器</button><button id="tb-mgr" onclick="tab('mgr')">管理</button></div>
+    <span id="dsstat" title="DeepSeek Harness 服务状态(点击启动/检查)">服务检测中…</span>
     <span id="pstat" title="本地工具调用补丁(8081)状态">检测中…</span>
   </div>
   <p class="sub">插件/技能可点【一键安装】(经 <code>dsh plugin add</code> 安装);MCP 服务器点【打开 GitHub 仓库】前往仓库查看安装/配置说明,由你自己在仓库里按说明运行。</p>
@@ -95,6 +97,20 @@
       ps.className='off';
       ps.title='未检测到本地补丁(8081)。请确认 scripts/qwen_tool_proxy.py 已启动、上游模型服务在跑。';
     }
+  }
+
+  // DeepSeek Harness 服务状态徽标(点击启动/检查)
+  async function checkDsh(){
+    const el=document.getElementById('dsstat');
+    const r=await window.harnessDesktop.dshStatus();
+    if(r.running){ el.textContent='Harness 服务在线'; el.className='on'; el.title='DeepSeek Harness 服务运行中 · '+r.url; }
+    else { el.textContent='Harness 服务离线'; el.className='off'; el.title='DeepSeek Harness 服务未运行 · 点击启动'; }
+    el.onclick=async ()=>{
+      el.textContent='启动中…';
+      const res=await window.harnessDesktop.startDsh();
+      if(window.harnessDesktop.showNotice) window.harnessDesktop.showNotice({ type: res.running?'ok':'info', title:'DeepSeek Harness 服务', message: res.message, detail: res.url||'' });
+      setTimeout(checkDsh, 1500);
+    };
   }
 
   window.harnessDesktop.onInstallProgress(d=>{
@@ -198,7 +214,7 @@
   window.install = async pkg=>{ status.textContent='一键安装中: '+pkg+' ...';
     const r=await window.harnessDesktop.installPlugin({pkg}); status.textContent=r.ok?'✅ '+r.message:'❌ '+r.error; };
 
-  window.addEventListener('DOMContentLoaded', ()=>{ showPlug(curatedPlugins,'精选(内置/开箱即用):'); showMcp(curatedMcp,'精选 MCP:'); checkProxy(); });
+  window.addEventListener('DOMContentLoaded', ()=>{ showPlug(curatedPlugins,'精选(内置/开箱即用):'); showMcp(curatedMcp,'精选 MCP:'); checkProxy(); checkDsh(); });
   go.addEventListener('click', ()=>searchPlug()); q.addEventListener('keydown',e=>{if(e.key==='Enter')searchPlug();});
   mgo.addEventListener('click', ()=>searchMcp()); mq.addEventListener('keydown',e=>{if(e.key==='Enter')searchMcp();});
 </script>

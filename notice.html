@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  :root{ --ok:#22c55e; --err:#e5484d; --info:#3b82f6; }
+  body{margin:0;font-family:'Segoe UI',sans-serif;background:#1e1f24;color:#e6e6ef;overflow:hidden;user-select:none;}
+  .wrap{padding:16px 18px;display:flex;gap:12px;align-items:flex-start;}
+  .icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex:none;}
+  .icon.ok{background:var(--ok);} .icon.err{background:var(--err);} .icon.info{background:var(--info);}
+  .ttl{font-size:14px;font-weight:600;}
+  .msg{font-size:13.5px;color:#d7dce8;margin-top:4px;line-height:1.4;}
+  .det{font-size:12.5px;color:#8f97a8;margin-top:6px;word-break:break-all;}
+  .btnrow{position:absolute;right:14px;bottom:12px;}
+  .btnrow button{background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;cursor:pointer;}
+  .btnrow button:hover{background:#2f6fd6;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="icon" class="icon info">i</div>
+    <div>
+      <div id="ttl" class="ttl"></div>
+      <div id="msg" class="msg"></div>
+      <div id="det" class="det"></div>
+    </div>
+  </div>
+  <div class="btnrow"><button id="ok">确定</button></div>
+<script>
+  const s=new URLSearchParams(location.search);
+  const type=s.get('type')||'info';
+  const icon=document.getElementById('icon');
+  icon.className='icon '+type;
+  icon.textContent = type==='ok' ? '✓' : type==='err' ? '✕' : 'i';
+  document.getElementById('ttl').textContent=s.get('title')||'提示';
+  document.getElementById('msg').textContent=s.get('message')||'';
+  document.getElementById('det').textContent=s.get('detail')||'';
+  document.getElementById('ok').addEventListener('click',()=>window.close());
+  setTimeout(()=>window.close(), 12000);   // 12 秒后自动关闭
+</script>
+</body>
+</html>
