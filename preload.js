@@ -11,7 +11,6 @@ contextBridge.exposeInMainWorld('harnessDesktop', {
   openProxy: () => ipcRenderer.invoke('open-proxy-external'),
   startDrag: () => ipcRenderer.send('start-drag'),
   stopDrag: () => ipcRenderer.send('stop-drag'),
-  deployMcp: (spec) => ipcRenderer.invoke('deploy-mcp', spec),
   getManaged: () => ipcRenderer.invoke('get-managed'),
   toggleManaged: (spec) => ipcRenderer.invoke('toggle-managed', spec),
   deleteManaged: (spec) => ipcRenderer.invoke('delete-managed', spec),

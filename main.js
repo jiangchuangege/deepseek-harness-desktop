@@ -14,6 +14,8 @@ const DSH_URL = process.env.DSH_WEB_URL || 'http://127.0.0.1:3080';
 const PROXY_PORT = 8081;
 const PROXY_UPSTREAM = process.env.HARNESS_PROXY_UPSTREAM || 'http://127.0.0.1:8080';
 const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
+// 桌面宠物窗口尺寸(可在此整体调整大小)
+const PET_W = 140, PET_H = 140;
 
 // 单实例: 避免重复启动导致补丁端口(8081)冲突
 const gotTheLock = app.requestSingleInstanceLock();
@@ -129,7 +131,7 @@ function savePetPos() {
 function createPetWindow() {
   if (petWindow) { petWindow.show(); petWindow.focus(); return; }
   petWindow = new BrowserWindow({
-    width: 188, height: 188,
+    width: PET_W, height: PET_H,
     backgroundColor: '#20222a',
     frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
@@ -138,8 +140,8 @@ function createPetWindow() {
   const saved = readJson(PET_POS_FILE, null);
   if (Array.isArray(saved) && saved.length === 2 && Number.isFinite(saved[0]) && Number.isFinite(saved[1])) {
     const wa = screen.getDisplayNearestPoint({ x: saved[0], y: saved[1] }).workArea;
-    const x = Math.min(Math.max(saved[0], wa.x), wa.x + wa.width - 188);
-    const y = Math.min(Math.max(saved[1], wa.y), wa.y + wa.height - 188);
+    const x = Math.min(Math.max(saved[0], wa.x), wa.x + wa.width - PET_W);
+    const y = Math.min(Math.max(saved[1], wa.y), wa.y + wa.height - PET_H);
     petWindow.setPosition(Math.round(x), Math.round(y));
   } else {
     const [dx, dy] = defaultPetPos();
@@ -160,6 +162,8 @@ function createPluginWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   pluginWindow.loadFile(path.join(__dirname, 'plugins.html'));
+  // 窗口内 target=_blank / window.open 一律走系统默认浏览器
+  pluginWindow.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   pluginWindow.on('closed', () => { pluginWindow = null; });
 }
 
@@ -285,26 +289,7 @@ ipcMain.handle('install-plugin', async (event, spec) => {
     });
   });
 });
-// 一键部署 MCP 服务器(受管注册; DSH 侧接入为后续增强)
-// 注意: 必须与 get-managed 一样写入 userData(MCP_FILE), 否则管理页读不到
-ipcMain.handle('deploy-mcp', async (event, spec) => {
-  if (!spec || !spec.name) return { ok: false, error: '缺少 MCP 名称' };
-  try {
-    const arr = readJson(MCP_FILE, []);
-    const found = arr.find(x => x.name === spec.name);
-    if (found) {
-      // 已存在: 更新命令参数, 保留启用状态
-      if (spec.command) found.command = spec.command;
-      if (spec.args) found.args = spec.args;
-      found.updatedAt = new Date().toISOString();
-    } else {
-      arr.push({ name: spec.name, command: spec.command || '', args: spec.args || [], enabled: true, addedAt: new Date().toISOString() });
-    }
-    writeJson(MCP_FILE, arr);
-    return { ok: true, message: `已部署 MCP: ${spec.name}` };
-  } catch (e) { return { ok: false, error: String(e) }; }
-});
-// 管理页: 读取已部署插件 + MCP 及启用状态
+// 管理页: 读取已安装插件(受管注册, 安装成功时记录)及启用状态
 ipcMain.handle('get-managed', () => ({
   mcp: readJson(MCP_FILE, []),
   plugins: readJson(PLG_FILE, [])
