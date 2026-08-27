@@ -1,7 +1,7 @@
 # DeepSeek Harness 桌面客户端
 
 一个 **Electron 桌面客户端**,给 **DeepSeek Harness (DSH)** 的 Web 界面套上原生窗口,
-并**集成插件/技能/MCP 市场**、**本地工具调用补丁**和**会动的 Live2D 桌面宠物**,开箱即用。
+并集成**插件 / 技能 / MCP 市场**、**本地工具调用补丁**和**会动的 Live2D 桌面宠物**,开箱即用。
 
 ---
 
@@ -21,16 +21,17 @@
 - 🪟 **原生桌面窗口**承载 DSH Web 界面(默认连接 `DSH_WEB_URL` 或 `http://127.0.0.1:3080`)。
 - 🐾 **会动的 Live2D 桌面宠物**:一个**透明悬浮的二次元小角色**(自带眨眼/呼吸/点头等动作);
   可**拖拽(位置自动记忆)、点它弹菜单**(聊天/插件市场/启动服务/检查补丁/关闭),点它会有小动作。
-  为省资源,**平时静止、鼠标碰到才动**;不满意可设 `PET_TRANSPARENT=0` 关闭透明。
+  为省资源,**平时静止、鼠标碰到才动**;如想关闭透明,设环境变量 `PET_TRANSPARENT=0`。
 - 🚀 **一键启动 DeepSeek Harness 服务**:文件菜单 / 宠物 / 托盘里都能**启动 / 检查 / 停止** DSH 服务(后台拉起 `dsh web --no-open`, 自动加载界面)。
-- 🧭 **插件 / 技能 / MCP 市场**:窗口内搜索社区仓库(**每页 30 条、可翻页**),插件可**一键安装**(`dsh plugin add`, 带实时进度条与进度条);MCP 点【打开 GitHub 仓库】按仓库说明自行运行;内置「管理」页对已安装插件**启用/停用、删除**,并实时显示**补丁(8081)在线状态**。
+- 🧭 **插件 / 技能 / MCP 市场**:窗口内搜索社区仓库(**每页 30 条、可翻页**),插件可**一键安装**(`dsh plugin add`, 带实时进度条);
+  MCP 点【打开 GitHub 仓库】按仓库说明自行运行;内置「管理」页对已安装插件**启用/停用、删除**,并实时显示**补丁(8081)在线状态**。
 - 🔌 **自带本地工具调用补丁**:启动时自动拉起 `scripts/qwen_tool_proxy.py`(端口 8081),把本地模型(如 Qwen 系列)原生的 `<tools>` 标签改写为标准 `tool_calls`,让 DSH 能驱动其操控电脑。
 - 💬 **小宠物聊天**:本地模型在线时由**本地模型回答**,离线自动回退内置规则回复。
 - ⚙️ **可选拉起 DSH**:设 `HARNESS_LAUNCH_DSH=1` 让客户端自动 `dsh web`(默认关闭,避免端口冲突)。
 
 ---
 
-## 快速开始
+## 快速开始(源码)
 
 ### 环境要求
 - Node.js **18+**(含 npm)
@@ -44,8 +45,11 @@ npm start        # 启动桌面客户端
 ```
 > 不想从源码跑就直接下载上面 Release 里的 exe 安装/运行。
 
-> 客户端启动时会: ① 拉起本地工具调用补丁(8081);② 打开 DSH Web 界面窗口。
-> 想让本地 Qwen 模型可操控电脑, 还需在 DSH 里把该模型 `baseURL` 指向 `http://127.0.0.1:8081/v1`。
+客户端启动时会:
+1. 自动拉起本地工具调用补丁(`scripts/qwen_tool_proxy.py`, 端口 8081);
+2. 打开 DSH Web 界面窗口(默认 `http://127.0.0.1:3080`)。
+
+想让本地 Qwen 模型可操控电脑,还需在 DSH 里把该模型的 `baseURL` 指向 `http://127.0.0.1:8081/v1`(详见 `docs/使用说明.md`)。
 
 ### 打包为安装程序(.exe)
 ```bash
@@ -56,10 +60,9 @@ npm run dist     # 使用 electron-builder 生成 Windows 安装包/便携版(re
 
 ## 插件体系
 
-- 注册表: `config/plugins.json` —— 分类列出 `patches`/`plugins`/`skills`/`mcpServers`,含启用开关。
+- 注册表: `config/plugins.json` —— 分类列出 `patches` / `plugins` / `skills` / `mcpServers`,含启用开关。
 - 查看: 客户端窗口内可通过 `window.harnessDesktop.getPlugins()` 读取(预加载脚本未开放 Node 权限,仅暴露安全接口)。
-- 安装: 窗口内触发 `window.harnessDesktop.installPlugin({pkg})` 或命令行
-  `dsh plugin --profile web add <包>`。
+- 安装: 窗口内「插件 / 技能 / MCP 市场」点【一键安装】,或命令行 `dsh plugin --profile web add <包>`。
 - 批处理: `scripts/install-plugins.ps1` 一键安装注册表里启用的第三方插件。
 
 > 详见 [`docs/插件接入指南.md`](docs/插件接入指南.md) 与 [`docs/使用说明.md`](docs/使用说明.md)。
