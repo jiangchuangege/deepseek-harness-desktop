@@ -162,8 +162,16 @@ function createPluginWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   pluginWindow.loadFile(path.join(__dirname, 'plugins.html'));
-  // 窗口内 target=_blank / window.open 一律走系统默认浏览器
-  pluginWindow.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  // 窗口内 target=_blank / window.open 的仓库外链: 在客户端内开一个原生窗口加载, 不跳系统浏览器
+  pluginWindow.webContents.setWindowOpenHandler(({ url }) => ({
+    action: 'allow',
+    overrideBrowserWindowOptions: {
+      width: 1000, height: 720,
+      title: '社区仓库',
+      icon: path.join(__dirname, 'assets', 'icon.png'),
+      webPreferences: { contextIsolation: true, nodeIntegration: false }
+    }
+  }));
   pluginWindow.on('closed', () => { pluginWindow = null; });
 }
 
