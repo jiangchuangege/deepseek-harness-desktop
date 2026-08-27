@@ -5,13 +5,14 @@
 
 ---
 
-## ⬇️ 下载 / 版本
+## 安装(直接下载 exe)
 
-- 本仓库的每版更新都会在 **GitHub Releases** 发布现成的 `.exe`(**安装包** + **便携版**)。
-- 当前版本 `v1.1.0` — 👉 打开 **Releases 页面**:https://github.com/jiangchuangege/deepseek-harness-desktop/releases
-- 直接下载 exe 的普通用户无需 `npm install`、无需打包。
+- 从 **[Release v1.1.0](https://github.com/jiangchuangege/deepseek-harness-desktop/releases/tag/v1.1.0)** 下载:
+  - **`DeepSeek Harness 桌面客户端 Setup 1.1.0.exe`** —— 安装版,双击安装到开始菜单(推荐)
+  - **`DeepSeek Harness 桌面客户端 1.1.0.exe`** —— 便携版,免安装,双击直接运行
+- 普通用户无需 `npm install`、无需打包,下载即用。
 
-> 下方「源码运行/打包」仅供想自行编译、改图标、改插件的人使用。
+> 下方「源码运行 / 自行打包」仅供想自己编译、改图标、改插件的人使用。
 
 ---
 
@@ -41,7 +42,7 @@
 npm install      # 首次
 npm start        # 启动桌面客户端
 ```
-Windows 也可直接双击 **`启动客户端.bat`**(自动 npm install 并 npm start)。
+> 不想从源码跑就直接下载上面 Release 里的 exe 安装/运行。
 
 > 客户端启动时会: ① 拉起本地工具调用补丁(8081);② 打开 DSH Web 界面窗口。
 > 想让本地 Qwen 模型可操控电脑, 还需在 DSH 里把该模型 `baseURL` 指向 `http://127.0.0.1:8081/v1`。
@@ -89,7 +90,6 @@ deepseek-harness-desktop/
 ├── docs/
 │   ├── 使用说明.md
 │   └── 插件接入指南.md
-├── 启动客户端.bat             # Windows 一键启动(npm install + npm start)
 └── README.md
 ```
 
