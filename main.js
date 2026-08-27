@@ -373,19 +373,22 @@ ipcMain.handle('open-proxy-check', async () => {
   return { url: `http://127.0.0.1:${PROXY_PORT}/v1/models` };
 });
 
-ipcMain.handle('search-plugins', async (event, query) => {
+ipcMain.handle('search-plugins', async (event, query, page) => {
   // 搜索 GitHub 上的社区插件仓库(主进程拉取, 避免渲染页 CORS)
   if (!query || !query.trim()) return { ok: false, error: '缺少关键词' };
   try {
-    // 用关键词在【仓库名/描述】里精确搜, 而不是拼一大堆泛词做 OR 搜(否则每次都是同样的最大页数且结果不相关)
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    // 用关键词在【仓库名/描述】里精确搜; 支持分页
     const q = `${query} in:name,description`;
-    const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&per_page=30`;
+    const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&per_page=30&page=${pageNum}`;
     const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'dsh-plugin-market' } });
     if (!res.ok) return { ok: false, error: `GitHub 搜索失败 (HTTP ${res.status})` };
     const data = await res.json();
     return {
       ok: true,
       total: data.total_count || 0,
+      page: pageNum,
+      per_page: 30,
       items: (data.items || []).map(it => ({ full_name: it.full_name, description: it.description, html_url: it.html_url }))
     };
   } catch (e) {

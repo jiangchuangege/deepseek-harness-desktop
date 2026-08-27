@@ -40,6 +40,11 @@
   .mi2 .acts{margin-top:0;}
   .mi2 .go{background:#22c55e;} .mi2 .stop{background:#e5484d;} .mi2 .del{background:#374151;}
   .mi2 button{border:none;border-radius:8px;padding:6px 15px;font-size:13.5px;cursor:pointer;color:#fff;}
+  /* 分页 */
+  .pager{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0 6px;}
+  .pager button{background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13.5px;}
+  .pager button:disabled{background:#2a2c33;color:#7a8290;cursor:default;}
+  .pager span{color:#9aa0b0;font-size:13px;}
   #status{position:fixed;bottom:12px;left:18px;color:#8fd18f;font-size:13.5px;}
 </style>
 </head>
@@ -151,32 +156,51 @@
     const meta = it.pkg ? `<span class="pkg">${esc(it.pkg)}</span>` : (it.cmd ? `<span class="pkg">运行: ${esc(it.cmd)}</span>` : '');
     return `<div class="card"><div class="name">${esc(it.name)}</div><div class="desc">${esc(it.desc||'')}</div><div class="acts">${acts}${btn}${meta}</div></div>`;
   }
-  function render(el, list, kind, note){
+  function render(el, list, kind, note, pagerHtml){
     el.innerHTML = (note?`<div class="card"><div class="desc">${esc(note)}</div></div>`:'') +
-      (list.length? list.map(x=>card(x,kind)).join('') : '<div class="card"><div class="desc">没有结果, 换个关键词试试。</div></div>');
+      (list.length? list.map(x=>card(x,kind)).join('') : '<div class="card"><div class="desc">没有结果, 换个关键词试试。</div></div>') + (pagerHtml||'');
   }
-  function showPlug(list, note){ render(results, list, 'plug', note); status.textContent=''; }
-  function showMcp(list, note){ render(mresults, list, 'mcp', note); }
+  // 分页控件(只有一页时不显示)
+  function pager(total, per, page, fn){
+    const tp=Math.max(1, Math.ceil(total/per));
+    if(tp<=1) return '';
+    return `<div class="pager"><button ${page>1?'':'disabled'} onclick="${fn}(${page-1})">上一页</button><span>第 ${page}/${tp} 页 · 共 ${total} 个仓库</span><button ${page<tp?'':'disabled'} onclick="${fn}(${page+1})">下一页</button></div>`;
+  }
+  function showPlug(list, note, pg){ render(results, list, 'plug', note, pg); }
+  function showMcp(list, note, pg){ render(mresults, list, 'mcp', note, pg); }
 
-  async function searchPlug(){ const kw=q.value.trim(); if(!kw)return; status.textContent='正在搜索...';
-    const r=await window.harnessDesktop.searchPlugins(kw);
+  const plugState={kw:'',page:1}, mcpState={kw:'',page:1};
+  async function searchPlug(page){
+    if(page===undefined){ plugState.kw=q.value.trim(); plugState.page=1; }
+    else { plugState.page=page; }
+    const kw=plugState.kw; if(!kw) return;
+    status.textContent='正在搜索...';
+    const r=await window.harnessDesktop.searchPlugins(kw, plugState.page);
     if(!r.ok){ status.textContent='✗ '+r.error; return; }
-    status.textContent=`共找到 ${r.total||r.items.length} 个仓库(仅显示前 ${r.items.length} 个)`;
+    const total=r.total||0, per=(r.per_page||30), p=(r.page||plugState.page);
+    status.textContent=`共找到 ${total} 个仓库`;
     const list=(r.items||[]).map(x=>({name:x.full_name,desc:(x.description||'')+'(源码仓库, 需发布为 npm 包才能一键安装; 点打开仓库查看安装说明)',url:x.html_url}));
-    showPlug(list.length?list:curatedPlugins, list.length?'':'未命中, 回退精选:'); }
-  async function searchMcp(){ const kw=mq.value.trim(); if(!kw)return; status.textContent='正在搜索...';
-    const r=await window.harnessDesktop.searchPlugins(kw+' mcp');
+    showPlug(list.length?list:curatedPlugins, list.length?'':'未命中, 回退精选: ', pager(total,per,p,'searchPlug'));
+  }
+  async function searchMcp(page){
+    if(page===undefined){ mcpState.kw=mq.value.trim(); mcpState.page=1; }
+    else { mcpState.page=page; }
+    const kw=mcpState.kw; if(!kw) return;
+    status.textContent='正在搜索...';
+    const r=await window.harnessDesktop.searchPlugins(kw+' mcp', mcpState.page);
     if(!r.ok){ status.textContent='✗ '+r.error; return; }
-    status.textContent=`共找到 ${r.total||r.items.length} 个仓库(仅显示前 ${r.items.length} 个)`;
+    const total=r.total||0, per=(r.per_page||30), p=(r.page||mcpState.page);
+    status.textContent=`共找到 ${total} 个仓库`;
     const list=(r.items||[]).map(x=>({name:x.full_name,desc:x.description||'',url:x.html_url}));
-    showMcp(list.length?list:curatedMcp, list.length?'':'未命中, 回退精选:'); }
+    showMcp(list.length?list:curatedMcp, list.length?'':'未命中, 回退精选: ', pager(total,per,p,'searchMcp'));
+  }
 
   window.install = async pkg=>{ status.textContent='一键安装中: '+pkg+' ...';
     const r=await window.harnessDesktop.installPlugin({pkg}); status.textContent=r.ok?'✅ '+r.message:'❌ '+r.error; };
 
   window.addEventListener('DOMContentLoaded', ()=>{ showPlug(curatedPlugins,'精选(内置/开箱即用):'); showMcp(curatedMcp,'精选 MCP:'); checkProxy(); });
-  go.addEventListener('click', searchPlug); q.addEventListener('keydown',e=>{if(e.key==='Enter')searchPlug();});
-  mgo.addEventListener('click', searchMcp); mq.addEventListener('keydown',e=>{if(e.key==='Enter')searchMcp();});
+  go.addEventListener('click', ()=>searchPlug()); q.addEventListener('keydown',e=>{if(e.key==='Enter')searchPlug();});
+  mgo.addEventListener('click', ()=>searchMcp()); mq.addEventListener('keydown',e=>{if(e.key==='Enter')searchMcp();});
 </script>
 </body>
 </html>
