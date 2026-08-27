@@ -1,34 +1,31 @@
 # DeepSeek Harness 桌面客户端
 
 一个 **Electron 桌面客户端**,给 **DeepSeek Harness (DSH)** 的 Web 界面套上原生窗口,
-并**集成一套插件/技能/MCP 注册表**与**本地工具调用补丁**,开箱即用。
+并**集成插件/技能/MCP 市场**、**本地工具调用补丁**和**会动的 Live2D 桌面宠物**,开箱即用。
 
 ---
 
-## ⬇️ 直接下载已编译好的 exe(无需自己打包)
+## ⬇️ 下载 / 版本
 
-本仓库已在 **GitHub Releases** 发布现成的 `.exe`,**下载即用,无需 `npm install`、无需打包**:
+- 本仓库的每版更新都会在 **GitHub Releases** 发布现成的 `.exe`(**安装包** + **便携版**)。
+- 当前版本 `v1.1.0` — 👉 打开 **Releases 页面**:https://github.com/jiangchuangege/deepseek-harness-desktop/releases
+- 直接下载 exe 的普通用户无需 `npm install`、无需打包。
 
-- **安装包**(推荐):`DeepSeek.Harness.Setup.1.0.0.exe` —— 双击安装到开始菜单
-- **便携版**(免安装):`DeepSeek.Harness.1.0.0.exe` —— 双击直接运行
-
-👉 打开 **Releases 页面**:https://github.com/jiangchuangege/deepseek-harness-desktop/releases
-
-> 下面「源码运行/打包」仅供想自行编译、改图标、改插件的人使用。普通用户直接下上面的 exe 即可。
+> 下方「源码运行/打包」仅供想自行编译、改图标、改插件的人使用。
 
 ---
 
 ## 它能做什么
 
 - 🪟 **原生桌面窗口**承载 DSH Web 界面(默认连接 `DSH_WEB_URL` 或 `http://127.0.0.1:3080`)。
-- 🧩 **插件注册表**:集中列出/启用/安装 **插件(Plugin) / 技能(Skill) / MCP 服务器 / 本地补丁**。
-  支持从窗口内 `dsh plugin add <包>` 安装 **GitHub 上的 DSH 插件**。
-- 🔌 **自带本地工具调用补丁**:启动客户端时会自动拉起 `scripts/qwen_tool_proxy.py`(端口 8081),
-  把本地模型(如 Qwen 系列)原生的 `<tools>` 标签改写为标准 `tool_calls`,让 DSH 能驱动其操控电脑。
-- 🐾 **桌面宠物**:一个**透明的 Live2D 二次元小角色**(会眨眼/呼吸/点头/随互动动起来),可**拖拽(位置自动记忆)、点菜单(聊天/市场/服务/补丁)、点它会有小动作**;聊天窗口在本地模型在线时由**本地模型回答**,离线自动回退内置回复。
-- 🚀 **一键启动 DeepSeek Harness 服务**:文件菜单 / 桌面宠物 / 托盘里都能**启动 / 检查 / 停止** DeepSeek Harness 服务(后台拉起 `dsh web --no-open`, 自动加载界面)。
-- 🧭 **插件浏览器**:菜单(文件→插件浏览器,或 `Ctrl+Shift+P`)打开窗口,**浏览社区插件/技能/MCP 并一键安装**(调用 `dsh plugin add`,带实时进度条);内置「管理」页可对已安装插件**启用/停用、删除**,并实时显示**补丁(8081)在线状态**。
-- ⚙️ **可选拉起 DSH**:设置环境变量 `HARNESS_LAUNCH_DSH=1` 可让客户端自动 `dsh web`(默认关闭,避免端口冲突)。
+- 🐾 **会动的 Live2D 桌面宠物**:一个**透明悬浮的二次元小角色**(自带眨眼/呼吸/点头等动作);
+  可**拖拽(位置自动记忆)、点它弹菜单**(聊天/插件市场/启动服务/检查补丁/关闭),点它会有小动作。
+  为省资源,**平时静止、鼠标碰到才动**;不满意可设 `PET_TRANSPARENT=0` 关闭透明。
+- 🚀 **一键启动 DeepSeek Harness 服务**:文件菜单 / 宠物 / 托盘里都能**启动 / 检查 / 停止** DSH 服务(后台拉起 `dsh web --no-open`, 自动加载界面)。
+- 🧭 **插件 / 技能 / MCP 市场**:窗口内搜索社区仓库(**每页 30 条、可翻页**),插件可**一键安装**(`dsh plugin add`, 带实时进度条与进度条);MCP 点【打开 GitHub 仓库】按仓库说明自行运行;内置「管理」页对已安装插件**启用/停用、删除**,并实时显示**补丁(8081)在线状态**。
+- 🔌 **自带本地工具调用补丁**:启动时自动拉起 `scripts/qwen_tool_proxy.py`(端口 8081),把本地模型(如 Qwen 系列)原生的 `<tools>` 标签改写为标准 `tool_calls`,让 DSH 能驱动其操控电脑。
+- 💬 **小宠物聊天**:本地模型在线时由**本地模型回答**,离线自动回退内置规则回复。
+- ⚙️ **可选拉起 DSH**:设 `HARNESS_LAUNCH_DSH=1` 让客户端自动 `dsh web`(默认关闭,避免端口冲突)。
 
 ---
 
@@ -72,14 +69,23 @@ npm run dist     # 使用 electron-builder 生成 Windows 安装包/便携版(re
 
 ```
 deepseek-harness-desktop/
-├── main.js                    # Electron 主进程(开窗/启补丁/插件 IPC)
+├── main.js                    # Electron 主进程(开窗/启补丁/服务管理/插件 IPC)
 ├── preload.js                 # 渲染进程安全桥(仅暴露最小接口)
-├── package.json               # 依赖与打包配置
+├── package.json               # 依赖与打包配置(predist 自动打包 Live2D)
+├── pet.html                   # 桌面宠物(透明 Live2D 渲染)
+├── chat.html                  # 小宠物聊天窗口
+├── plugins.html               # 插件/技能/MCP 市场(三 Tab + 分页)
+├── notice.html                # 自研提示(Toast)窗口
 ├── config/plugins.json        # 插件/技能/MCP/补丁 注册表(可扩展)
 ├── scripts/
 │   ├── qwen_tool_proxy.py     # 本地工具调用补丁(把 <tools> 改写为标准 tool_calls)
+│   ├── pet-live2d-entry.js    # Live2D 渲染入口(esbuild 打包为 assets/pet-live2d.js)
 │   └── install-plugins.ps1    # 一键安装启用的插件
-├── assets/                    # 应用图标等资源
+├── assets/
+│   ├── icon.png               # 应用图标
+│   ├── live2dcubismcore.min.js# Live2D Cubism 核心(官方 SDK)
+│   ├── pet-live2d.js          # pixi.js v6 + pixi-live2d-display 打包产物
+│   └── live2d/haru/           # Haru 模型(moc3/纹理/动作/表情)
 ├── docs/
 │   ├── 使用说明.md
 │   └── 插件接入指南.md
