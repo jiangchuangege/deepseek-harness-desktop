@@ -5,7 +5,7 @@
 //   3) 通过 IPC 提供插件注册表信息, 供窗口内"插件面板"使用
 //   4) 支持从窗口触发"安装 GitHub 插件/技能"(dsh plugin add)
 
-const { app, BrowserWindow, ipcMain, shell, Menu, nativeTheme, Tray, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeTheme, Tray, screen } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -87,14 +87,59 @@ function startProxy() {
 }
 
 // 可选: 若 DSH 未运行, 则拉起 dsh web。默认关闭, 以免端口冲突。
+function launchDsh() {
+  console.log('[dsh] 启动 dsh web (--no-open) -> ' + DSH_URL);
+  dshProc = spawn('dsh', ['web', '--no-open'], { shell: process.platform === 'win32' });
+  dshProc.stdout.on('data', d => console.log('[dsh] ' + String(d).trim()));
+  dshProc.stderr.on('data', d => console.error('[dsh] ' + String(d).trim()));
+  dshProc.on('error', e => console.error('[dsh] 启动失败(找不到 dsh?): ' + e));
+  dshProc.on('exit', code => { console.error('[dsh] exited ' + code); dshProc = null; });
+}
 function maybeStartDsh() {
-  if (process.env.HARNESS_LAUNCH_DSH === '1') {
-    console.log('[dsh] 尝试启动 dsh web ...');
-    dshProc = spawn('dsh', ['web'], { shell: process.platform === 'win32' });
-    dshProc.stdout.on('data', d => console.log('[dsh] ' + String(d).trim()));
-    dshProc.stderr.on('data', d => console.error('[dsh] ' + String(d).trim()));
-    dshProc.on('error', e => console.error('[dsh] 启动失败(找不到 dsh?): ' + e));
+  if (process.env.HARNESS_LAUNCH_DSH === '1') launchDsh();
+}
+
+// DSH 服务可达性检查(默认 3080)
+async function dshUp(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3500);
+  try {
+    const res = await fetch(url, { signal: controller.signal, redirect: 'follow' });
+    return res.ok;
+  } catch { return false; }
+  finally { clearTimeout(timer); }
+}
+function focusOrLoadMain() {
+  if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.loadURL(DSH_URL); mainWindow.show(); mainWindow.focus(); }
+  else createWindow();
+}
+// 菜单/宠物/托盘触发的三个服务动作(带提示对话框)
+async function handleStartDsh() {
+  const up = await dshUp(DSH_URL);
+  if (up) {
+    dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: 'DeepSeek Harness 服务已在运行 ✅', detail: DSH_URL });
+    focusOrLoadMain();
+    return;
   }
+  if (dshProc && dshProc.exitCode === null) {
+    dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: 'DeepSeek Harness 服务正在启动…', detail: DSH_URL });
+    return;
+  }
+  launchDsh();
+  dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: '已启动 DeepSeek Harness 服务(后台)', detail: '界面稍候将自动加载。若仍未加载, 稍后通过菜单「检查服务状态」确认。' });
+  setTimeout(() => focusOrLoadMain(), 1600);
+}
+async function handleStopDsh() {
+  if (dshProc && dshProc.exitCode === null) {
+    dshProc.kill();
+    dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: '已停止由客户端托管的 DeepSeek Harness 服务' });
+  } else {
+    dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: '该服务不是由客户端托管(可能由外部启动), 客户端无法停止', detail: '客户端只能停止它自己启动的 dsh web 进程。' });
+  }
+}
+async function handleDshStatus() {
+  const up = await dshUp(DSH_URL);
+  dialog.showMessageBox({ type: 'info', title: 'DeepSeek Harness 服务', message: up ? 'DeepSeek Harness 服务运行中 ✅' : 'DeepSeek Harness 服务未运行 ⚠️', detail: DSH_URL });
 }
 
 function createWindow() {
@@ -191,6 +236,10 @@ function createChatWindow() {
 function createMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: '文件', submenu: [
+      { label: '启动 DeepSeek Harness 服务', accelerator: 'Ctrl+Shift+S', click: () => handleStartDsh() },
+      { label: '停止 DeepSeek Harness 服务', click: () => handleStopDsh() },
+      { label: '检查服务状态', click: () => handleDshStatus() },
+      { type: 'separator' },
       { label: '社区插件市场', accelerator: 'Ctrl+Shift+P', click: () => createPluginWindow() },
       { label: '桌面宠物', accelerator: 'Ctrl+Shift+T', click: () => createPetWindow() },
       { label: '检查补丁(模型列表)', click: () => shell.openExternal(`http://127.0.0.1:${PROXY_PORT}/v1/models`) },
@@ -204,6 +253,9 @@ function createMenu() {
     tray = new Tray(path.join(__dirname, 'assets', 'icon.png'));
     tray.setToolTip('DeepSeek Harness 桌面客户端');
     tray.setContextMenu(Menu.buildFromTemplate([
+      { label: '🚀 启动 DeepSeek Harness 服务', click: () => handleStartDsh() },
+      { label: '检查服务状态', click: () => handleDshStatus() },
+      { type: 'separator' },
       { label: '社区插件市场', click: () => createPluginWindow() },
       { label: '桌面宠物', click: () => createPetWindow() },
       { label: '显示主窗口', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } else createWindow(); } },
@@ -247,6 +299,7 @@ ipcMain.handle('show-pet-menu', () => {
   const mu = Menu.buildFromTemplate([
     { label: '💬 聊天', click: () => createChatWindow() },
     { label: '🧩 社区插件市场', click: () => createPluginWindow() },
+    { label: '🚀 启动 DeepSeek Harness 服务', click: () => handleStartDsh() },
     { label: '🛰️ 检查补丁', click: () => shell.openExternal(`http://127.0.0.1:${PROXY_PORT}/v1/models`) },
     { type: 'separator' },
     { label: '✖ 关闭宠物', click: () => { if (petWindow) { petWindow.close(); } } }
@@ -371,6 +424,23 @@ ipcMain.handle('chat-send', async (event, text) => {
 ipcMain.handle('open-proxy-check', async () => {
   // 让用户方便把浏览器指向模型列表确认代理在跑
   return { url: `http://127.0.0.1:${PROXY_PORT}/v1/models` };
+});
+// 启动 / 停止 / 检查 DeepSeek Harness 服务(供渲染窗口触发)
+ipcMain.handle('start-dsh', async () => {
+  const up = await dshUp(DSH_URL);
+  if (up) return { ok: true, running: true, message: 'DSH 服务已在运行', url: DSH_URL };
+  if (dshProc && dshProc.exitCode === null) return { ok: true, running: false, message: 'DSH 服务启动中…', url: DSH_URL };
+  launchDsh();
+  setTimeout(() => focusOrLoadMain(), 1600);
+  return { ok: true, running: false, message: '已启动 DSH 服务(后台)', url: DSH_URL };
+});
+ipcMain.handle('stop-dsh', async () => {
+  if (dshProc && dshProc.exitCode === null) { dshProc.kill(); return { ok: true, message: '已停止 DSH 服务' }; }
+  return { ok: true, message: 'DSH 服务非客户端托管, 无法停止' };
+});
+ipcMain.handle('dsh-status', async () => {
+  const running = await dshUp(DSH_URL);
+  return { running, url: DSH_URL };
 });
 
 ipcMain.handle('search-plugins', async (event, query, page) => {

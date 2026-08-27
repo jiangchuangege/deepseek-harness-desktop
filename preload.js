@@ -16,5 +16,8 @@ contextBridge.exposeInMainWorld('harnessDesktop', {
   deleteManaged: (spec) => ipcRenderer.invoke('delete-managed', spec),
   checkProxy: () => ipcRenderer.invoke('check-proxy'),
   chatSend: (text) => ipcRenderer.invoke('chat-send', text),
+  startDsh: () => ipcRenderer.invoke('start-dsh'),
+  stopDsh: () => ipcRenderer.invoke('stop-dsh'),
+  dshStatus: () => ipcRenderer.invoke('dsh-status'),
   onInstallProgress: (cb) => ipcRenderer.on('install-progress', (_e, data) => cb(data))
 });
