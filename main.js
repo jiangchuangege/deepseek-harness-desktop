@@ -5,8 +5,8 @@
 //   3) 通过 IPC 提供插件注册表信息, 供窗口内"插件面板"使用
 //   4) 支持从窗口触发"安装 GitHub 插件/技能"(dsh plugin add)
 
-const { app, BrowserWindow, ipcMain, shell, dialog, Menu, nativeTheme, Tray } = require('electron');
-const { spawn, exec } = require('child_process');
+const { app, BrowserWindow, ipcMain, shell, Menu, nativeTheme, Tray, screen } = require('electron');
+const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -14,6 +14,16 @@ const DSH_URL = process.env.DSH_WEB_URL || 'http://127.0.0.1:3080';
 const PROXY_PORT = 8081;
 const PROXY_UPSTREAM = process.env.HARNESS_PROXY_UPSTREAM || 'http://127.0.0.1:8080';
 const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
+
+// 单实例: 避免重复启动导致补丁端口(8081)冲突
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+  });
+}
 
 let mainWindow = null;
 let petWindow = null;
@@ -30,6 +40,32 @@ function readPlugins() {
     return { plugins: [], skills: [], mcpServers: [] };
   }
 }
+// 受管注册(管理页数据源): 已部署插件 + MCP 的启用开关
+// 存到用户数据目录(app.getPath('userData')), 避免便携版 temp 目录每次清空导致丢失
+const REG_DIR = app.getPath('userData');
+const MCP_FILE = path.join(REG_DIR, 'mcp-enabled.json');
+const PLG_FILE = path.join(REG_DIR, 'plugins-enabled.json');
+const PET_POS_FILE = path.join(REG_DIR, 'pet-pos.json');
+function readJson(file, def) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return def; } }
+function writeJson(file, obj) { try { fs.writeFileSync(file, JSON.stringify(obj, null, 2)); } catch {} }
+function recordPlugin(pkg) {
+  if (!pkg) return;
+  const arr = readJson(PLG_FILE, []);
+  if (!arr.some(x => x.name === pkg)) arr.push({ name: pkg, enabled: true, addedAt: new Date().toISOString() });
+  writeJson(PLG_FILE, arr);
+}
+// 查询补丁代理(8081)的可用模型列表; 失败返回 null
+async function getProxyModels() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const res = await fetch(`http://127.0.0.1:${PROXY_PORT}/v1/models`, { signal: controller.signal });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data.data || []).map(m => m.id || m);
+  } catch { return null; }
+  finally { clearTimeout(timer); }
+}
 
 // 启动工具调用补丁代理(本地模型需要它才能被 DSH 驱动)
 function startProxy() {
@@ -42,6 +78,7 @@ function startProxy() {
 
   cmd.stdout.on('data', d => console.log('[proxy] ' + String(d).trim()));
   cmd.stderr.on('data', d => console.error('[proxy] ' + String(d).trim()));
+  cmd.on('error', e => console.error('[proxy] 启动失败(找不到 py/python?): ' + e));
   cmd.on('exit', code => console.error('[proxy] exited ' + code));
   proxyProc = cmd;
   console.log('[proxy] 启动 (端口 ' + PROXY_PORT + ' -> ' + PROXY_UPSTREAM + ')');
@@ -54,6 +91,7 @@ function maybeStartDsh() {
     dshProc = spawn('dsh', ['web'], { shell: process.platform === 'win32' });
     dshProc.stdout.on('data', d => console.log('[dsh] ' + String(d).trim()));
     dshProc.stderr.on('data', d => console.error('[dsh] ' + String(d).trim()));
+    dshProc.on('error', e => console.error('[dsh] 启动失败(找不到 dsh?): ' + e));
   }
 }
 
@@ -80,15 +118,35 @@ function createWindow() {
 }
 
 // 桌面宠物: 实体轻量小窗(不做透明, 避免 Windows 掉帧卡顿)
+function defaultPetPos() {
+  const wa = screen.getPrimaryDisplay().workArea;
+  return [wa.x + wa.width - 220, wa.y + wa.height - 220];
+}
+function savePetPos() {
+  if (!petWindow || petWindow.isDestroyed()) return;
+  try { fs.writeFileSync(PET_POS_FILE, JSON.stringify(petWindow.getPosition())); } catch {}
+}
 function createPetWindow() {
   if (petWindow) { petWindow.show(); petWindow.focus(); return; }
   petWindow = new BrowserWindow({
-    width: 132, height: 134,
+    width: 188, height: 188,
     backgroundColor: '#20222a',
     frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
+  // 恢复上次位置(并夹回屏幕内, 防止显示器变更后宠物跑到屏幕外)
+  const saved = readJson(PET_POS_FILE, null);
+  if (Array.isArray(saved) && saved.length === 2 && Number.isFinite(saved[0]) && Number.isFinite(saved[1])) {
+    const wa = screen.getDisplayNearestPoint({ x: saved[0], y: saved[1] }).workArea;
+    const x = Math.min(Math.max(saved[0], wa.x), wa.x + wa.width - 188);
+    const y = Math.min(Math.max(saved[1], wa.y), wa.y + wa.height - 188);
+    petWindow.setPosition(Math.round(x), Math.round(y));
+  } else {
+    const [dx, dy] = defaultPetPos();
+    petWindow.setPosition(dx, dy);
+  }
   petWindow.loadFile(path.join(__dirname, 'pet.html'));
+  petWindow.on('close', () => savePetPos());   // close 时窗口尚未销毁, 可读取位置
   petWindow.on('closed', () => { petWindow = null; });
 }
 
@@ -145,8 +203,10 @@ function createMenu() {
 }
 
 function cleanup() {
+  if (dragInterval) { clearInterval(dragInterval); dragInterval = null; }
   if (proxyProc) { proxyProc.kill(); }
   if (dshProc) { dshProc.kill(); }
+  savePetPos();
   if (petWindow) { petWindow.destroy(); }
 }
 
@@ -184,24 +244,134 @@ ipcMain.handle('show-pet-menu', () => {
 // 宠物菜单: 打开社区插件市场 / 打开模型列表
 ipcMain.handle('open-plugin-market', () => { createPluginWindow(); });
 ipcMain.handle('open-proxy-external', () => { shell.openExternal(`http://127.0.0.1:${PROXY_PORT}/v1/models`); });
-// 宠物拖拽
-ipcMain.handle('get-pet-pos', () => (petWindow && !petWindow.isDestroyed()) ? petWindow.getPosition() : [0,0]);
-ipcMain.handle('move-pet', (event, x, y) => { if (petWindow && !petWindow.isDestroyed()) petWindow.setPosition(Math.round(Number(x)), Math.round(Number(y))); });
+// 宠物拖拽(主进程轮询鼠标, 流畅; 夹在屏幕工作区内, 防止拖出屏幕后收不到 mouseup)
+let dragInterval = null;
+ipcMain.on('start-drag', () => {
+  if (!petWindow || petWindow.isDestroyed()) return;
+  const cur = screen.getCursorScreenPoint();
+  const [wx, wy] = petWindow.getPosition();
+  const offX = cur.x - wx, offY = cur.y - wy;
+  if (dragInterval) clearInterval(dragInterval);
+  dragInterval = setInterval(() => {
+    if (!petWindow || petWindow.isDestroyed()) { clearInterval(dragInterval); dragInterval = null; return; }
+    const c = screen.getCursorScreenPoint();
+    const wa = screen.getDisplayNearestPoint(c).workArea;
+    const w = petWindow.getBounds();
+    const nx = Math.min(Math.max(c.x - offX, wa.x), wa.x + wa.width - w.width);
+    const ny = Math.min(Math.max(c.y - offY, wa.y), wa.y + wa.height - w.height);
+    petWindow.setPosition(Math.round(nx), Math.round(ny));
+  }, 16);
+});
+ipcMain.on('stop-drag', () => {
+  if (dragInterval) { clearInterval(dragInterval); dragInterval = null; }
+  savePetPos();   // 拖完记住位置, 下次启动还原
+});
 
 ipcMain.handle('install-plugin', async (event, spec) => {
-  // spec: { type: 'Plugin'|'Skill'|'MCP'|'Patch', pkg: 'xxxx' }
+  // spec: { pkg: 'xxxx' }  —— 用 spawn 流式返回进度(进度条)
   if (!spec || !spec.pkg) return { ok: false, error: '缺少包名' };
-  try {
-    // 用 dsh plugin add 安装(需 dsh 在 PATH)
-    await new Promise((resolve, reject) => {
-      exec(`dsh plugin --profile web add ${spec.pkg}`, { shell: process.platform === 'win32' }, (err, stdout, stderr) => {
-        if (err) return reject(new Error(stderr || err.message));
-        resolve(stdout);
-      });
+  return new Promise((resolve) => {
+    const send = (obj) => { try { event.sender.send('install-progress', obj); } catch {} };
+    const child = spawn('dsh', ['plugin', '--profile', 'web', 'add', spec.pkg], { shell: process.platform === 'win32' });
+    const timer = setTimeout(() => { try { child.kill(); } catch {} send({ pkg: spec.pkg, done: true, code: -2, line: '安装超时(可能不是有效的 npm 包)' }); resolve({ ok: false, error: '安装超时(可能不是有效的 npm 包)' }); }, 90000);
+    child.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && send({ pkg: spec.pkg, line: l })));
+    child.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && send({ pkg: spec.pkg, line: l })));
+    child.on('error', e => { clearTimeout(timer); send({ pkg: spec.pkg, done: true, code: -1 }); resolve({ ok: false, error: String(e) }); });
+    child.on('close', code => {
+      clearTimeout(timer);
+      send({ pkg: spec.pkg, done: true, code });
+      if (code === 0) { recordPlugin(spec.pkg); resolve({ ok: true, message: `已安装: ${spec.pkg}` }); }
+      else resolve({ ok: false, error: `安装失败(退出码 ${code})` });
     });
-    return { ok: true, message: `已安装: ${spec.pkg}` };
+  });
+});
+// 一键部署 MCP 服务器(受管注册; DSH 侧接入为后续增强)
+// 注意: 必须与 get-managed 一样写入 userData(MCP_FILE), 否则管理页读不到
+ipcMain.handle('deploy-mcp', async (event, spec) => {
+  if (!spec || !spec.name) return { ok: false, error: '缺少 MCP 名称' };
+  try {
+    const arr = readJson(MCP_FILE, []);
+    const found = arr.find(x => x.name === spec.name);
+    if (found) {
+      // 已存在: 更新命令参数, 保留启用状态
+      if (spec.command) found.command = spec.command;
+      if (spec.args) found.args = spec.args;
+      found.updatedAt = new Date().toISOString();
+    } else {
+      arr.push({ name: spec.name, command: spec.command || '', args: spec.args || [], enabled: true, addedAt: new Date().toISOString() });
+    }
+    writeJson(MCP_FILE, arr);
+    return { ok: true, message: `已部署 MCP: ${spec.name}` };
+  } catch (e) { return { ok: false, error: String(e) }; }
+});
+// 管理页: 读取已部署插件 + MCP 及启用状态
+ipcMain.handle('get-managed', () => ({
+  mcp: readJson(MCP_FILE, []),
+  plugins: readJson(PLG_FILE, [])
+}));
+// 管理页: 启动/停止 某个插件或 MCP(切换启用状态)
+ipcMain.handle('toggle-managed', (event, spec) => {
+  if (!spec || !spec.name) return { ok: false, error: '缺少名称' };
+  const file = spec.kind === 'mcp' ? MCP_FILE : PLG_FILE;
+  const arr = readJson(file, []);
+  const item = arr.find(x => x.name === spec.name);
+  const target = (spec.enabled === undefined || spec.enabled === null) ? !(item ? item.enabled : true) : !!spec.enabled;
+  if (item) item.enabled = target;
+  else arr.push({ name: spec.name, enabled: target });
+  writeJson(file, arr);
+  return { ok: true, name: spec.name, enabled: target };
+});
+// 管理页: 删除某个已部署项
+ipcMain.handle('delete-managed', (event, spec) => {
+  if (!spec || !spec.name) return { ok: false, error: '缺少名称' };
+  const file = spec.kind === 'mcp' ? MCP_FILE : PLG_FILE;
+  const arr = readJson(file, []);
+  writeJson(file, arr.filter(x => x.name !== spec.name));
+  return { ok: true, name: spec.name };
+});
+
+// 补丁代理健康检查: 返回可用模型列表(供窗口显示在线状态)
+ipcMain.handle('check-proxy', async () => {
+  const models = await getProxyModels();
+  return models
+    ? { ok: true, models, url: `http://127.0.0.1:${PROXY_PORT}/v1/models` }
+    : { ok: false, url: `http://127.0.0.1:${PROXY_PORT}/v1/models` };
+});
+
+// 宠物聊天: 走本地补丁代理(8081)的 chat/completions, 让宠物真的用本地模型回答;
+// 代理/上游不可用时返回 ok:false, 由渲染层回退到内置规则回复。
+ipcMain.handle('chat-send', async (event, text) => {
+  const msg = String(text || '').trim().slice(0, 2000);
+  if (!msg) return { ok: false, reply: '' };
+  try {
+    // 先取一个上游可用模型名(避免某些 OpenAI 兼容服务拒绝未知 model)
+    let model = 'local';
+    const models = await getProxyModels();
+    if (Array.isArray(models) && models.length) model = models[0];
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    const res = await fetch(`http://127.0.0.1:${PROXY_PORT}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: '你是桌面上的一只活泼可爱的小宠物,名字叫"小H"。回答简短亲切,控制在20字以内,可以带颜文字。' },
+          { role: 'user', content: msg }
+        ],
+        stream: false,
+        max_tokens: 120
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (!res.ok) return { ok: false, reply: '', error: `HTTP ${res.status}` };
+    const data = await res.json();
+    const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    return (reply && String(reply).trim()) ? { ok: true, reply: String(reply).trim() } : { ok: false, reply: '', error: '空回复' };
   } catch (e) {
-    return { ok: false, error: String(e) };
+    return { ok: false, reply: '', error: String(e && e.message ? e.message : e) };
   }
 });
 

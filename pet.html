@@ -4,11 +4,13 @@
 <meta charset="utf-8" />
 <style>
   html,body{margin:0;padding:0;background:#20222a;overflow:hidden;user-select:none;font-family:'Segoe UI',sans-serif;}
-  #pet{ position:relative; width:128px; height:128px; margin:4px; cursor:grab; }
+  #pet{ position:relative; width:180px; height:180px; margin:4px; cursor:grab; }
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
-  #ring{ position:absolute; inset:0; border-radius:18px; pointer-events:none;
-    box-shadow:0 0 0 2px rgba(110,168,255,.55), 0 8px 22px rgba(0,0,0,.45); animation:bob 3.4s ease-in-out infinite; }
-  #pet img{ width:100%; height:100%; object-fit:cover; border-radius:18px; animation:bob 3.4s ease-in-out infinite; }
+  #ring{ position:absolute; inset:0; border-radius:20px; pointer-events:none;
+    box-shadow:0 0 0 2px rgba(110,168,255,.55), 0 8px 22px rgba(0,0,0,.45); }
+  #pet img{ width:100%; height:100%; object-fit:cover; border-radius:20px; }
+  /* 静止; 悬停时轻微动一下(减少常驻动画占用, 减轻卡顿) */
+  #pet:hover img{ animation:bob 1.6s ease-in-out; }
   #x{ position:absolute; top:8px; right:8px; z-index:5; width:22px; height:22px; border-radius:50%;
     background:#e5484d; color:#fff; font:12px/22px sans-serif; text-align:center; cursor:pointer;
     -webkit-app-region:no-drag; box-shadow:0 2px 6px rgba(0,0,0,.4); }
@@ -26,22 +28,21 @@
   const pet=document.getElementById('pet');
   document.getElementById('x').addEventListener('click',()=>window.close());
   const HD = window.harnessDesktop;
-  // JS 拖拽 + 点击菜单: 小移动视为点击弹菜单, 大移动视为拖窗
-  let down=false, sx=0, sy=0, wx=0, wy=0, moved=false;
+  // 主进程轮询鼠标拖动(流畅) + 轻点弹菜单: 移动>阈值=拖动, 否则=点击
+  let down=false, sx=0, sy=0, moved=false;
   pet.addEventListener('mousedown', e=>{
     if(e.target.id==='x') return;
     down=true; moved=false; sx=e.screenX; sy=e.screenY;
-    if(HD && HD.getPetPos) HD.getPetPos().then(p=>{ if(Array.isArray(p) && p.length===2){ wx=p[0]; wy=p[1]; } });
+    if(HD && HD.startDrag) HD.startDrag();
   });
   window.addEventListener('mousemove', e=>{
     if(!down) return;
-    const dx=e.screenX-sx, dy=e.screenY-sy;
-    if(Math.abs(dx)+Math.abs(dy) > 5) moved=true;
-    if(moved && HD && HD.movePet) HD.movePet(wx+dx, wy+dy);
+    if(Math.abs(e.screenX-sx)+Math.abs(e.screenY-sy) > 5) moved=true;
   });
   window.addEventListener('mouseup', e=>{
     if(!down) return; down=false;
-    if(!moved && HD && HD.openPetMenu) HD.openPetMenu();   // 点击(未拖动) → 弹菜单
+    if(HD && HD.stopDrag) HD.stopDrag();
+    if(!moved && HD && HD.openPetMenu) HD.openPetMenu();   // 未拖动 → 弹菜单
   });
 </script>
 </body>

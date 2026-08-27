@@ -9,6 +9,13 @@ contextBridge.exposeInMainWorld('harnessDesktop', {
   openPetMenu: () => ipcRenderer.invoke('show-pet-menu'),
   openMarket: () => ipcRenderer.invoke('open-plugin-market'),
   openProxy: () => ipcRenderer.invoke('open-proxy-external'),
-  getPetPos: () => ipcRenderer.invoke('get-pet-pos'),
-  movePet: (x, y) => ipcRenderer.invoke('move-pet', x, y)
+  startDrag: () => ipcRenderer.send('start-drag'),
+  stopDrag: () => ipcRenderer.send('stop-drag'),
+  deployMcp: (spec) => ipcRenderer.invoke('deploy-mcp', spec),
+  getManaged: () => ipcRenderer.invoke('get-managed'),
+  toggleManaged: (spec) => ipcRenderer.invoke('toggle-managed', spec),
+  deleteManaged: (spec) => ipcRenderer.invoke('delete-managed', spec),
+  checkProxy: () => ipcRenderer.invoke('check-proxy'),
+  chatSend: (text) => ipcRenderer.invoke('chat-send', text),
+  onInstallProgress: (cb) => ipcRenderer.on('install-progress', (_e, data) => cb(data))
 });
