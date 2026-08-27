@@ -22,6 +22,7 @@
   <div id="fallback"><img src="./assets/icon.png" alt="宠物" draggable="false" /></div>
   <div id="x" title="关闭宠物">×</div>
   <div id="hint">点我</div>
+<script src="./assets/live2dcubismcore.min.js"></script>
 <script src="./assets/pet-live2d.js"></script>
 <script>
   const canvas=document.getElementById('pcanvas');
@@ -35,7 +36,7 @@
   function showFallback(){ strip.classList.add('hide'); fallback.style.display='flex'; }
   async function initLive2D(){
     if(typeof window.startPetLive2D!=='function'){ showFallback(); return; }
-    const r=await window.startPetLive2D(canvas, './assets/live2d/shizuku/shizuku.model.json');
+    const r=await window.startPetLive2D(canvas, './assets/live2d/haru/haru_greeter_t03.model3.json');
     strip.classList.add('hide');
     if(!r || !r.ok){ showFallback(); }
   }

@@ -222,7 +222,7 @@ function createPetWindow() {
     petWindow.setPosition(dx, dy);
   }
   petWindow.loadFile(path.join(__dirname, 'pet.html'));
-  petWindow.on('close', () => savePetPos());   // close 时窗口尚未销毁, 可读取位置
+  petWindow.on('close', () => savePetPos());
   petWindow.on('closed', () => { petWindow = null; });
 }
 
