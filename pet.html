@@ -3,34 +3,47 @@
 <head>
 <meta charset="utf-8" />
 <style>
-  html,body{margin:0;padding:0;background:#20222a;overflow:hidden;user-select:none;font-family:'Segoe UI',sans-serif;}
-  #pet{ position:relative; width:108px; height:108px; margin:4px; cursor:grab; }
-  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
-  #ring{ position:absolute; inset:0; border-radius:16px; pointer-events:none;
-    box-shadow:0 0 0 2px rgba(110,168,255,.55), 0 8px 22px rgba(0,0,0,.45); }
-  #pet img{ width:100%; height:100%; object-fit:cover; border-radius:16px; }
-  /* 静止; 悬停时轻微动一下(减少常驻动画占用, 减轻卡顿) */
-  #pet:hover img{ animation:bob 1.6s ease-in-out; }
-  #x{ position:absolute; top:5px; right:5px; z-index:5; width:17px; height:17px; border-radius:50%;
-    background:#e5484d; color:#fff; font:10px/17px sans-serif; text-align:center; cursor:pointer;
-    -webkit-app-region:no-drag; box-shadow:0 2px 6px rgba(0,0,0,.4); }
-  #hint{ position:absolute; bottom:3px; left:0; right:0; text-align:center; color:#8f97a8; font-size:9px; -webkit-app-region:no-drag; }
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;user-select:none;font-family:'Segoe UI',sans-serif;}
+  canvas{position:absolute;inset:0;z-index:1;cursor:grab;}
+  #x{ position:absolute; top:6px; right:6px; z-index:5; width:20px; height:20px; border-radius:50%;
+    background:#e5484d; color:#fff; font:11px/20px sans-serif; text-align:center; cursor:pointer;
+    -webkit-app-region:no-drag; box-shadow:0 2px 6px rgba(0,0,0,.35); }
+  #hint{ position:absolute; bottom:6px; left:0; right:0; z-index:5; text-align:center; color:#cbd3e1; font-size:11px;
+    -webkit-app-region:no-drag; text-shadow:0 1px 3px rgba(0,0,0,.6); }
+  #strip{ position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center; color:#8f97a8; font-size:12px; }
+  #strip.hide{ display:none; }
+  #fallback{ position:absolute; inset:0; z-index:0; display:none; align-items:center; justify-content:center; }
+  #fallback img{ width:128px; height:128px; border-radius:50%; box-shadow:0 6px 18px rgba(0,0,0,.4); }
 </style>
 </head>
 <body>
-  <div id="pet" title="点击打开菜单(可拖拽)">
-    <div id="ring"></div>
-    <img src="./assets/icon.png" alt="宠物" draggable="false" />
-    <div id="x" title="关闭宠物">×</div>
-    <div id="hint">点我</div>
-  </div>
+  <canvas id="pcanvas"></canvas>
+  <div id="strip">角色加载中…</div>
+  <div id="fallback"><img src="./assets/icon.png" alt="宠物" draggable="false" /></div>
+  <div id="x" title="关闭宠物">×</div>
+  <div id="hint">点我</div>
+<script src="./assets/pet-live2d.js"></script>
 <script>
-  const pet=document.getElementById('pet');
-  document.getElementById('x').addEventListener('click',()=>window.close());
-  const HD = window.harnessDesktop;
-  // 主进程轮询鼠标拖动(流畅) + 轻点弹菜单: 移动>阈值=拖动, 否则=点击
+  const canvas=document.getElementById('pcanvas');
+  const x=document.getElementById('x');
+  const strip=document.getElementById('strip');
+  const fallback=document.getElementById('fallback');
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  x.addEventListener('click',()=>window.close());
+  const HD=window.harnessDesktop;
+
+  function showFallback(){ strip.classList.add('hide'); fallback.style.display='flex'; }
+  async function initLive2D(){
+    if(typeof window.startPetLive2D!=='function'){ showFallback(); return; }
+    const r=await window.startPetLive2D(canvas, './assets/live2d/shizuku/shizuku.model.json');
+    strip.classList.add('hide');
+    if(!r || !r.ok){ showFallback(); }
+  }
+  initLive2D();
+
+  // 拖拽 + 轻点菜单(主进程轮询鼠标拖动; 移动>阈值=拖, 否则=点击弹菜单)
   let down=false, sx=0, sy=0, moved=false;
-  pet.addEventListener('mousedown', e=>{
+  document.body.addEventListener('mousedown', e=>{
     if(e.target.id==='x') return;
     down=true; moved=false; sx=e.screenX; sy=e.screenY;
     if(HD && HD.startDrag) HD.startDrag();
@@ -42,7 +55,7 @@
   window.addEventListener('mouseup', e=>{
     if(!down) return; down=false;
     if(HD && HD.stopDrag) HD.stopDrag();
-    if(!moved && HD && HD.openPetMenu) HD.openPetMenu();   // 未拖动 → 弹菜单
+    if(!moved && HD && HD.openPetMenu) HD.openPetMenu();
   });
 </script>
 </body>

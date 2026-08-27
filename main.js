@@ -15,7 +15,7 @@ const PROXY_PORT = 8081;
 const PROXY_UPSTREAM = process.env.HARNESS_PROXY_UPSTREAM || 'http://127.0.0.1:8080';
 const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
 // 桌面宠物窗口尺寸(可在此整体调整大小)
-const PET_W = 116, PET_H = 116;
+const PET_W = 176, PET_H = 264;
 
 // 单实例: 避免重复启动导致补丁端口(8081)冲突
 const gotTheLock = app.requestSingleInstanceLock();
@@ -206,9 +206,9 @@ function createPetWindow() {
   if (petWindow) { petWindow.show(); petWindow.focus(); return; }
   petWindow = new BrowserWindow({
     width: PET_W, height: PET_H,
-    backgroundColor: '#20222a',
+    transparent: true, backgroundColor: '#00000000',
     frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, webSecurity: false }
   });
   // 恢复上次位置(并夹回屏幕内, 防止显示器变更后宠物跑到屏幕外)
   const saved = readJson(PET_POS_FILE, null);

@@ -7,17 +7,24 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "prestart": "esbuild scripts/pet-live2d-entry.js --bundle --format=iife --minify --outfile=assets/pet-live2d.js",
+    "dist": "electron-builder",
+    "predist": "esbuild scripts/pet-live2d-entry.js --bundle --format=iife --minify --outfile=assets/pet-live2d.js"
   },
   "devDependencies": {
     "electron": "^31.7.7",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "pixi-live2d-display": "^0.4.0",
+    "pixi.js": "^6.5.10"
   },
   "build": {
     "appId": "com.jiangchuangege.harnessdesktop",
     "productName": "DeepSeek Harness 桌面客户端",
     "asar": false,
-    "directories": { "output": "release" },
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "main.js",
       "preload.js",
@@ -34,8 +41,18 @@
     ],
     "win": {
       "target": [
-        { "target": "portable", "arch": ["x64"] },
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "assets/icon.png"
     },
