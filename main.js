@@ -16,6 +16,8 @@ const PROXY_UPSTREAM = process.env.HARNESS_PROXY_UPSTREAM || 'http://127.0.0.1:8
 const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
 // 桌面宠物窗口尺寸(可在此整体调整大小)
 const PET_W = 176, PET_H = 264;
+// 透明悬浮(Windows 掉帧明显时推荐关闭, 默认不透明)
+const PET_TRANSPARENT = process.env.PET_TRANSPARENT === '1';
 
 // 单实例: 避免重复启动导致补丁端口(8081)冲突
 const gotTheLock = app.requestSingleInstanceLock();
@@ -206,7 +208,8 @@ function createPetWindow() {
   if (petWindow) { petWindow.show(); petWindow.focus(); return; }
   petWindow = new BrowserWindow({
     width: PET_W, height: PET_H,
-    transparent: true, backgroundColor: '#00000000', hasShadow: false,
+    // 默认不透明(Windows 上透明置顶窗口是主要卡顿源); 设 PET_TRANSPARENT=1 可恢复透明悬浮
+    transparent: PET_TRANSPARENT, backgroundColor: PET_TRANSPARENT ? '#00000000' : '#20222a', hasShadow: false,
     frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, webSecurity: false }
   });
