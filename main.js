@@ -15,7 +15,7 @@ const PROXY_PORT = 8081;
 const PROXY_UPSTREAM = process.env.HARNESS_PROXY_UPSTREAM || 'http://127.0.0.1:8080';
 const PLUGINS_FILE = path.join(__dirname, 'config', 'plugins.json');
 // 桌面宠物窗口尺寸(可在此整体调整大小)
-const PET_W = 140, PET_H = 140;
+const PET_W = 116, PET_H = 116;
 
 // 单实例: 避免重复启动导致补丁端口(8081)冲突
 const gotTheLock = app.requestSingleInstanceLock();
@@ -156,7 +156,7 @@ function createPetWindow() {
 function createPluginWindow() {
   if (pluginWindow) { pluginWindow.focus(); return; }
   pluginWindow = new BrowserWindow({
-    width: 760, height: 620,
+    width: 880, height: 700,
     title: '插件浏览器',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
@@ -377,13 +377,15 @@ ipcMain.handle('search-plugins', async (event, query) => {
   // 搜索 GitHub 上的社区插件仓库(主进程拉取, 避免渲染页 CORS)
   if (!query || !query.trim()) return { ok: false, error: '缺少关键词' };
   try {
-    const q = `${query} deepseek-harness OR dsh plugin`;
-    const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&per_page=12`;
+    // 用关键词在【仓库名/描述】里精确搜, 而不是拼一大堆泛词做 OR 搜(否则每次都是同样的最大页数且结果不相关)
+    const q = `${query} in:name,description`;
+    const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&per_page=30`;
     const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'dsh-plugin-market' } });
     if (!res.ok) return { ok: false, error: `GitHub 搜索失败 (HTTP ${res.status})` };
     const data = await res.json();
     return {
       ok: true,
+      total: data.total_count || 0,
       items: (data.items || []).map(it => ({ full_name: it.full_name, description: it.description, html_url: it.html_url }))
     };
   } catch (e) {
